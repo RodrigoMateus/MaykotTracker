@@ -320,8 +320,19 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
 
     }
 
+    /**
+     * Este callback roda em uma thread separada. Atualizações na view deverão ser feitas chamando
+     * o método runOnUiThread().
+     */
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
+        MainActivity.this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Log.i("run", "Rodando na thread:" + android.os.Process.getThreadPriority(android.os.Process.myTid()));
+                Toast.makeText(getApplicationContext(), "Mensagem MQTT Entregue.", Toast.LENGTH_LONG).show();
+            }
+        });
         Log.i("BROKER MENSAGE", "Ola!");
     }
 
