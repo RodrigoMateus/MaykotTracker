@@ -339,12 +339,10 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         MainActivity.this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Log.i("run", "Rodando na thread:" + android.os.Process.getThreadPriority(android.os.Process.myTid()));
+                // Log.i("run", "Rodando na thread:" + android.os.Process.getThreadPriority(android.os.Process.myTid()));
                 Toast.makeText(getApplicationContext(), "Mensagem MQTT Entregue.", Toast.LENGTH_LONG).show();
             }
         });
-        Log.i("BROKER MENSAGE", "Ola!");
-        Toast.makeText(getBaseContext(), "Mensagem MQTT entregue.", Toast.LENGTH_LONG).show();
     }
 
     @Override
