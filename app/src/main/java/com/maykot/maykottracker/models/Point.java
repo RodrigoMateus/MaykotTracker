@@ -15,6 +15,7 @@ public class Point {
     private double longitude;
     private int accuracy;
     private int speed;
+    private String msg;
 
     public Point() {
         createdAt = new Date();
@@ -68,6 +69,10 @@ public class Point {
         this.speed = speed;
     }
 
+    public String getMsg() { return msg; }
+
+    public void setMsg(String msg) { this.msg = msg; }
+
     public boolean save(SQLiteDatabase db) {
         return new PointDAO().save(db, this);
     }
@@ -85,6 +90,7 @@ public class Point {
                 "; longitude=;" + longitude +
                 "; accuracy=;" + accuracy +
                 "; speed=;" + speed +
+                "; msg=;" + msg +
                 ";}";
     }
 }

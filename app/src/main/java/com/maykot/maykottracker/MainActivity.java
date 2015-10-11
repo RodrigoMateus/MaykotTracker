@@ -61,10 +61,11 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     private EditText mUrlApplicationServerEditText;
     private Button mSaveUrlBrokerButton;
     private Button mSaveUrlApplicationServerButton;
+    private Button mTakePictureButton;
     private Button mStartTrackingButton;
     private Button mStopTrackingButton;
+    private EditText mUserMessageEditText;
     private Button mSendMessageButton;
-    private Button mTakePictureButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -139,11 +140,20 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
             }
         });
 
+        mUserMessageEditText = (EditText) findViewById(R.id.edit_text_user_message);
+
         mSendMessageButton = (Button) findViewById(R.id.btn_send_message);
         mSendMessageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Helper.sendMessage(MainActivity.this);
+                String msg = "";
+                if (mUserMessageEditText != null) {
+                    msg = mUserMessageEditText.getText().toString();
+                }
+                if (msg.isEmpty()) {
+                    msg = "MensagemTeste";
+                }
+                Helper.sendMessage(MainActivity.this, msg);
             }
         });
 
@@ -334,6 +344,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
             }
         });
         Log.i("BROKER MENSAGE", "Ola!");
+        Toast.makeText(getBaseContext(), "Mensagem MQTT entregue.", Toast.LENGTH_LONG).show();
     }
 
     @Override

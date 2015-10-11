@@ -140,27 +140,38 @@
         android:orientation="horizontal">
 
         <Button
+            android:id="@+id/btn_take_picture"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
+            android:layout_weight="1"
+            android:background="@android:color/holo_blue_light"
+            android:text="Foto" />
+
+        <Button
             android:id="@+id/btn_start_tracking"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:layout_weight="1"
             android:background="@android:color/holo_green_dark"
-            android:text="Iniciar Percurso" />
+            android:text="Iniciar" />
 
 
         <Button
             android:id="@+id/btn_stop_tracking"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:layout_weight="1"
             android:background="@android:color/holo_red_dark"
-            android:text="Parar Percurso" />
+            android:text="Parar" />
     </LinearLayout>
 
     <LinearLayout
@@ -169,16 +180,12 @@
         android:layout_marginBottom="20dp"
         android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btn_take_picture"
-            android:layout_width="wrap_content"
+
+        <EditText
+            android:id="@+id/edit_text_user_message"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:layout_marginLeft="5dp"
-            android:layout_marginRight="5dp"
-            android:layout_weight="1"
-            android:background="@android:color/holo_blue_light"
-            android:text="Tirar Foto" />
+            android:layout_weight="1" />
 
         <Button
             android:id="@+id/btn_send_message"
@@ -187,8 +194,10 @@
             android:layout_gravity="bottom"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
-            android:layout_weight="1"
+            android:layout_weight="0"
             android:background="@android:color/holo_orange_light"
-            android:text="Enviar mensagem" />
+            android:paddingLeft="5dp"
+            android:paddingRight="5dp"
+            android:text="Mensagem" />
     </LinearLayout>
 </LinearLayout>

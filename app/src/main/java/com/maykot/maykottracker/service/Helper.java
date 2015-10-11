@@ -15,7 +15,7 @@ import java.util.Random;
 
 public class Helper {
 
-    public static void sendMessage(MainActivity mainActivity) {
+    public static void sendMessage(MainActivity mainActivity, String msg) {
         Point point = new Point();
         point.setAccuracy(new Random().nextInt(20));
         point.setCreatedAt(new Date());
@@ -23,6 +23,7 @@ public class Helper {
         point.setSpeed(new Random().nextInt(20));
         point.setLatitude(-22.2222);
         point.setLatitude(-48.2222);
+        point.setMsg(msg);
 
         Gson gson = new Gson();
         String pointJson = gson.toJson(point);
