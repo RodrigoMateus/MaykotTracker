@@ -21,6 +21,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.maykot.maykottracker.radio.HttpPostSerializer;
+import com.maykot.maykottracker.radio.interfaces.MessageListener;
 import com.maykot.maykottracker.service.Helper;
 import com.maykot.maykottracker.service.TrackingService;
 
@@ -52,7 +54,6 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     public static int QoS = 2;
     public static String MQTT_CLIENT_ID = null;
     public static String SUBSCRIBED_TOPIC = null;
-    public static final String TOPIC_TXT = "maykot/text";
     public static final String TOPIC_HTTP_POST = "maykot/http_post/";
 
     /*  VIEW */
@@ -154,6 +155,20 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                     msg = "MensagemTeste";
                 }
                 Helper.sendMessage(MainActivity.this, msg);
+
+
+//                Helper.sendMessage(MainActivity.this, msg, new MessageListener() {
+//
+//                    public void sucess(int status, byte[] message) {
+//
+//                    }
+//
+//                    public void timeout() {
+//
+//                    }
+//
+//                });
+
             }
         });
 
@@ -175,8 +190,8 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         MQTT_CLIENT_ID = MqttClient.generateClientId();
         Log.i("MQTT_CLIENT_ID", MQTT_CLIENT_ID);
 
-        //SUBSCRIBED_TOPIC = "maykot/" + MQTT_CLIENT_ID + "/#";
-        SUBSCRIBED_TOPIC = "maykot/teste";
+        SUBSCRIBED_TOPIC = "maykot/" + MQTT_CLIENT_ID + "/#";
+        //SUBSCRIBED_TOPIC = "maykot/teste";
         Log.i("SUBSCRIBED_TOPIC", SUBSCRIBED_TOPIC);
 
         try {
@@ -252,7 +267,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                     MqttMessage mqttMessage = new MqttMessage();
                     mqttMessage.setQos(QoS);
                     mqttMessage.setPayload(dataToSend);
-                    mqttClient.publish(TOPIC_HTTP_POST, mqttMessage);
+                    mqttClient.publish(TOPIC_HTTP_POST + MQTT_CLIENT_ID, mqttMessage);
                 } catch (MqttException e) {
                     Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
                 }

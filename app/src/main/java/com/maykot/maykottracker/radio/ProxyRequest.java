@@ -1,4 +1,4 @@
-package com.maykot.maykottracker.models;
+package com.maykot.maykottracker.radio;
 
 import java.io.Serializable;
 

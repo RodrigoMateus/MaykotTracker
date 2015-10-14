@@ -19,7 +19,7 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import com.google.gson.Gson;
-import com.maykot.maykottracker.HttpPostSerializer;
+import com.maykot.maykottracker.radio.HttpPostSerializer;
 import com.maykot.maykottracker.MainActivity;
 import com.maykot.maykottracker.R;
 import com.maykot.maykottracker.dao.DBManager;
@@ -175,7 +175,7 @@ public class TrackingService extends Service {
                 MqttMessage mqttMessage = new MqttMessage();
                 mqttMessage.setQos(MainActivity.QoS);
                 mqttMessage.setPayload(dataToSend);
-                MainActivity.mqttClient.publish(MainActivity.TOPIC_HTTP_POST, mqttMessage);
+                MainActivity.mqttClient.publish(MainActivity.TOPIC_HTTP_POST + MainActivity.MQTT_CLIENT_ID, mqttMessage);
             } catch (MqttException e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
             }

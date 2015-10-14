@@ -3,7 +3,7 @@ package com.maykot.maykottracker.service;
 import android.util.Log;
 
 import com.google.gson.Gson;
-import com.maykot.maykottracker.HttpPostSerializer;
+import com.maykot.maykottracker.radio.HttpPostSerializer;
 import com.maykot.maykottracker.MainActivity;
 import com.maykot.maykottracker.models.Point;
 
@@ -42,7 +42,7 @@ public class Helper {
             MqttMessage mqttMessage = new MqttMessage();
             mqttMessage.setQos(MainActivity.QoS);
             mqttMessage.setPayload(dataToSend);
-            MainActivity.mqttClient.publish(MainActivity.TOPIC_HTTP_POST, mqttMessage);
+            MainActivity.mqttClient.publish(MainActivity.TOPIC_HTTP_POST + MainActivity.MQTT_CLIENT_ID, mqttMessage);
         } catch (MqttException e) {
             Log.d("Error send MQTT message", "Publish failed with reason code = " + e.getReasonCode());
         }

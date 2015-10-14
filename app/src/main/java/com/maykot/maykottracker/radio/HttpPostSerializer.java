@@ -1,6 +1,6 @@
-package com.maykot.maykottracker;
+package com.maykot.maykottracker.radio;
 
-import com.maykot.maykottracker.models.ProxyRequest;
+import com.maykot.maykottracker.radio.ProxyRequest;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
