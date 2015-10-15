@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     public static final String TOPIC_HTTP_POST = "maykot/http_post/";
 
     /*  VIEW */
+    private Button mMqttConnectButton;
     private CheckBox mCheckBoxNotifyPositions;
     private EditText mUrlBrokerEditText;
     private EditText mUrlApplicationServerEditText;
@@ -74,6 +75,14 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         setContentView(R.layout.activity_main);
 
         mSharedPreferences = getSharedPreferences(DEFAULT_SHARED_PREFERENCES, Context.MODE_PRIVATE);
+
+        mMqttConnectButton = (Button) findViewById(R.id.btn_mqtt_connect);
+        mMqttConnectButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mqttConnect();
+            }
+        });
 
         mCheckBoxNotifyPositions = (CheckBox) findViewById(R.id.checkbox_notify_positions);
         mCheckBoxNotifyPositions.setChecked(mSharedPreferences.getBoolean(NOTIFY_LOCATION, false));
@@ -193,7 +202,9 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         SUBSCRIBED_TOPIC = "maykot/" + MQTT_CLIENT_ID + "/#";
         //SUBSCRIBED_TOPIC = "maykot/teste";
         Log.i("SUBSCRIBED_TOPIC", SUBSCRIBED_TOPIC);
+    }
 
+    private void mqttConnect() {
         try {
             mqttClient = new MqttClient(mSharedPreferences.getString(URL_BROKER, "tcp://iot.eclipse.org:1883"), MQTT_CLIENT_ID, null);
             mqttClient.setCallback(this);
@@ -245,11 +256,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             if (!mqttClient.isConnected()) {
-                try {
-                    mqttClient.connect(mqttConnectOptions);
-                } catch (MqttException e) {
-                    Log.d(getClass().getCanonicalName(), "Connection attempt failed with reason code = " + e.getReasonCode() + ":" + e.getCause());
-                }
+                mqttConnect();
             }
 
             Bundle extras = data.getExtras();
