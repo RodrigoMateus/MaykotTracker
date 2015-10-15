@@ -15,7 +15,7 @@ import java.util.Random;
 
 public class Helper {
 
-    public static void sendMessage(MainActivity mainActivity, String msg) {
+    public static void sendMessage(MainActivity mainActivity, String msg, String url_app_server) {
         Point point = new Point();
         point.setAccuracy(new Random().nextInt(20));
         point.setCreatedAt(new Date());
@@ -36,7 +36,7 @@ public class Helper {
             }
         }
 
-        byte[] dataToSend = HttpPostSerializer.dataToPost("http://localhost:8000", "application/json", pointJson.getBytes());
+        byte[] dataToSend = HttpPostSerializer.dataToPost(url_app_server, "application/json", pointJson.getBytes());
 
         try {
             MqttMessage mqttMessage = new MqttMessage();

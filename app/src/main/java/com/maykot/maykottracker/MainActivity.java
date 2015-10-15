@@ -154,7 +154,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                 if (msg.isEmpty()) {
                     msg = "MensagemTeste";
                 }
-                Helper.sendMessage(MainActivity.this, msg);
+                Helper.sendMessage(MainActivity.this, msg, mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "http://localhost:8000"));
 
 
 //                Helper.sendMessage(MainActivity.this, msg, new MessageListener() {
@@ -350,12 +350,13 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
      * o método runOnUiThread().
      */
     @Override
-    public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
+    public void messageArrived(String topic, final MqttMessage mqttMessage) throws Exception {
         MainActivity.this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 // Log.i("run", "Rodando na thread:" + android.os.Process.getThreadPriority(android.os.Process.myTid()));
-                Toast.makeText(getApplicationContext(), "Mensagem MQTT Entregue.", Toast.LENGTH_LONG).show();
+                String response = new String(mqttMessage.getPayload());
+                Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + response, Toast.LENGTH_LONG).show();
             }
         });
     }

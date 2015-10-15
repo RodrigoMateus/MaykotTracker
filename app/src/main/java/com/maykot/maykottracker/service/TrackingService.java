@@ -169,7 +169,7 @@ public class TrackingService extends Service {
             Gson gson = new Gson();
             String pointJson = gson.toJson(point);
 
-            byte[] dataToSend = HttpPostSerializer.dataToPost(mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "localhost:8000"), "application/json", pointJson.getBytes());
+            byte[] dataToSend = HttpPostSerializer.dataToPost(mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "http://localhost:8000"), "application/json", pointJson.getBytes());
 
             try {
                 MqttMessage mqttMessage = new MqttMessage();
