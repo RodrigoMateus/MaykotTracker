@@ -1,12 +1,15 @@
 package com.maykot.maykottracker.radio;
 
-import com.maykot.maykottracker.models.ProxyRequest;
+import com.maykot.maykottracker.radio.interfaces.MessageListener;
 
 import org.apache.commons.lang3.SerializationUtils;
 
+import java.util.Date;
+
 public class HttpPostSerializer {
 
-    public static byte[] dataToPost(String url, String contentType, byte[] body)
+    public static Payload dataToPost(String url, String contentType, byte[] body,
+                                    MessageListener messageListener)
 
     {
         ProxyRequest proxyRequest = new ProxyRequest();
@@ -14,20 +17,31 @@ public class HttpPostSerializer {
         proxyRequest.setUrl(url);
         proxyRequest.setContentType(contentType);
         proxyRequest.setBody(body);
+        proxyRequest.setIdMessage(String.valueOf(new Date().getTime()));
+        proxyRequest.setVerb(Verb.POST.getVerb());
 
-//        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-//        ObjectOutput objectOutput;
-//        try {
-//            objectOutput = new ObjectOutputStream(byteArrayOutputStream);
-//            objectOutput.writeObject(proxyRequest);
-//            objectOutput.close();
-//            byteArrayOutputStream.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//        return byteArrayOutputStream.toByteArray();
+        CacheMessage.getInstance().addMessage(proxyRequest.getIdMessage(), messageListener, proxyRequest);
 
-        return SerializationUtils.serialize(proxyRequest);
+        return new Payload(proxyRequest.getIdMessage(),SerializationUtils.serialize(proxyRequest));
     }
+
+    public static Payload dataToGet(String url, String contentType, MessageListener messageListener)
+
+    {
+        ProxyRequest proxyRequest = new ProxyRequest();
+        proxyRequest.setUrl(url);
+        proxyRequest.setContentType(contentType);
+        proxyRequest.setBody(null);
+        proxyRequest.setIdMessage(String.valueOf(new Date().getTime()));
+        proxyRequest.setVerb(Verb.GET.getVerb());
+
+        CacheMessage.getInstance().addMessage(proxyRequest.getIdMessage(),messageListener, proxyRequest);
+
+        return new Payload(proxyRequest.getIdMessage(),SerializationUtils.serialize(proxyRequest));
+    }
+
+    public static ProxyResponse deserialize(byte[] dataResult){
+        return  (ProxyResponse) SerializationUtils.deserialize(dataResult) ;
+    }
+
 }
