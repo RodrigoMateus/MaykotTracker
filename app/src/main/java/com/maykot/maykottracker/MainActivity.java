@@ -24,26 +24,17 @@ import android.widget.Toast;
 import com.google.gson.Gson;
 import com.maykot.maykottracker.models.Point;
 import com.maykot.maykottracker.radio.ContentType;
-import com.maykot.maykottracker.radio.HttpPostSerializer;
 import com.maykot.maykottracker.radio.ProxyRequest;
 import com.maykot.maykottracker.radio.ProxyResponse;
 import com.maykot.maykottracker.radio.Radio;
 import com.maykot.maykottracker.radio.interfaces.MessageListener;
-import com.maykot.maykottracker.service.Helper;
 import com.maykot.maykottracker.service.TrackingService;
-
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Date;
 import java.util.Random;
 
-public class MainActivity extends AppCompatActivity{
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     static final int REQUEST_IMAGE_CAPTURE = 1;
@@ -58,16 +49,16 @@ public class MainActivity extends AppCompatActivity{
 
     /*  VIEW */
     private Button mMqttConnectButton;
-    private CheckBox mCheckBoxNotifyPositions;
-    private EditText mUrlBrokerEditText;
-    private EditText mUrlApplicationServerEditText;
-    private Button mSaveUrlBrokerButton;
-    private Button mSaveUrlApplicationServerButton;
+    private CheckBox mNotifyPositionsCheckBox;
     private Button mTakePictureButton;
     private Button mStartTrackingButton;
     private Button mStopTrackingButton;
-    private EditText mUserMessageEditText;
-    private Button mSendMessageButton;
+    private EditText mHttpGetEditText;
+    private Button mHttpGetSendButton;
+    private EditText mMqttUrlEditText;
+    private Button mMqttUrlSaveButton;
+    private EditText mApplicationServerUrlEditText;
+    private Button mApplicationServerUrlSaveButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,45 +70,48 @@ public class MainActivity extends AppCompatActivity{
         mSharedPreferences = getSharedPreferences(DEFAULT_SHARED_PREFERENCES, Context.MODE_PRIVATE);
 
         mMqttConnectButton = (Button) findViewById(R.id.btn_mqtt_connect);
+        mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
+
         mMqttConnectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 try {
                     Radio.getInstance().mqttConnect(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
-                }catch (Exception e){
+                    mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+                    mMqttConnectButton.setText("MQTT OK!");
+                } catch (Exception e) {
                     e.getMessage();
                 }
-             }
+            }
         });
 
-        mCheckBoxNotifyPositions = (CheckBox) findViewById(R.id.checkbox_notify_positions);
-        mCheckBoxNotifyPositions.setChecked(mSharedPreferences.getBoolean(NOTIFY_LOCATION, false));
-        mCheckBoxNotifyPositions.setOnClickListener(new View.OnClickListener() {
+        mNotifyPositionsCheckBox = (CheckBox) findViewById(R.id.checkbox_notify_positions);
+        mNotifyPositionsCheckBox.setChecked(mSharedPreferences.getBoolean(NOTIFY_LOCATION, false));
+        mNotifyPositionsCheckBox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 saveNotifyPositions();
             }
         });
 
-        mUrlBrokerEditText = (EditText) findViewById(R.id.edit_text_url_broker);
-        mUrlBrokerEditText.setText(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
+        TextView mStatusConexaoTextView;
+        mStatusConexaoTextView = (TextView) findViewById(R.id.txtView_connection_status);
+        int connected = checkNetworkConnection(this);
+        if (connected == 0) {
+            mStatusConexaoTextView.setText("Sem Conexão");
+        }
+        if (connected == 1) {
+            mStatusConexaoTextView.setText("Conexão WiFi: " + networkInfo.getExtraInfo());
+        }
+        if (connected == 2) {
+            mStatusConexaoTextView.setText("Conexão 3G: " + networkInfo.getExtraInfo());
+        }
 
-        mSaveUrlBrokerButton = (Button) findViewById(R.id.btn_save_url_broker);
-        mSaveUrlBrokerButton.setOnClickListener(new View.OnClickListener() {
+        mTakePictureButton = (Button) findViewById(R.id.btn_take_picture);
+        mTakePictureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                saveUrlBroker();
-            }
-        });
-
-        mUrlApplicationServerEditText = (EditText) findViewById(R.id.edit_text_url_application_server);
-        mUrlApplicationServerEditText.setText(mSharedPreferences.getString(URL_APP_SERVER, "http://localhost:8000"));
-
-        mSaveUrlApplicationServerButton = (Button) findViewById(R.id.btn_save_url_application_server);
-        mSaveUrlApplicationServerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                saveUrlAppServer();
+                dispatchTakePictureIntent();
             }
         });
 
@@ -137,7 +131,7 @@ public class MainActivity extends AppCompatActivity{
 
         mStopTrackingButton = (Button) findViewById(R.id.btn_stop_tracking);
         mStopTrackingButton.setBackgroundColor(Color.GRAY);
-        mStopTrackingButton.setEnabled(true );
+        mStopTrackingButton.setEnabled(true);
         mStopTrackingButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -150,82 +144,84 @@ public class MainActivity extends AppCompatActivity{
             }
         });
 
-        mTakePictureButton = (Button) findViewById(R.id.btn_take_picture);
-        mTakePictureButton.setOnClickListener(new View.OnClickListener() {
+        mMqttUrlEditText = (EditText) findViewById(R.id.edit_text_url_broker);
+        mMqttUrlEditText.setText(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
+
+        mMqttUrlSaveButton = (Button) findViewById(R.id.btn_save_url_broker);
+        mMqttUrlSaveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dispatchTakePictureIntent();
+                saveUrlBroker();
             }
         });
 
-        mUserMessageEditText = (EditText) findViewById(R.id.edit_text_user_message);
+        mApplicationServerUrlEditText = (EditText) findViewById(R.id.edit_text_url_application_server);
+        mApplicationServerUrlEditText.setText(mSharedPreferences.getString(URL_APP_SERVER, "http://localhost:8000"));
 
-        mSendMessageButton = (Button) findViewById(R.id.btn_send_message);
-        mSendMessageButton.setOnClickListener(new View.OnClickListener() {
+        mApplicationServerUrlSaveButton = (Button) findViewById(R.id.btn_save_url_application_server);
+        mApplicationServerUrlSaveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                        String msg = "";
-                        if (mUserMessageEditText != null) {
-                            msg = mUserMessageEditText.getText().toString();
-                        }
-                        if (msg.isEmpty()) {
-                            msg = "MensagemTeste";
-                        }
-
-                        Point point = new Point();
-                        point.setAccuracy(new Random().nextInt(20));
-                        point.setCreatedAt(new Date());
-                        point.setUploaded(true);
-                        point.setSpeed(new Random().nextInt(20));
-                        point.setLatitude(-22.2222);
-                        point.setLatitude(-48.2222);
-                        point.setMsg(msg);
-
-                        Gson gson = new Gson();
-                        final String pointJson = gson.toJson(point);
-                        sendMessage(pointJson);
+                saveUrlAppServer();
             }
         });
 
-        TextView mStatusConexaoTextView;
-        mStatusConexaoTextView = (TextView) findViewById(R.id.txtView_connection_status);
-        int connected = checkNetworkConnection(this);
-        if (connected == 0) {
-            mStatusConexaoTextView.setText("Sem Conexão");
-        }
-        if (connected == 1) {
-            mStatusConexaoTextView.setText("Conexão WiFi: " + networkInfo.getExtraInfo());
-        }
-        if (connected == 2) {
-            mStatusConexaoTextView.setText("Conexão 3G: " + networkInfo.getExtraInfo());
-        }
+        mHttpGetEditText = (EditText) findViewById(R.id.edit_text_get_message);
+
+        mHttpGetSendButton = (Button) findViewById(R.id.btn_send_http_get);
+        mHttpGetSendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String msg = "";
+                if (mHttpGetEditText != null) {
+                    msg = mHttpGetEditText.getText().toString();
+                }
+                if (msg.isEmpty()) {
+                    msg = "MensagemTeste";
+                }
+
+                Point point = new Point();
+                point.setAccuracy(new Random().nextInt(20));
+                point.setCreatedAt(new Date());
+                point.setUploaded(true);
+                point.setSpeed(new Random().nextInt(20));
+                point.setLatitude(-22.2222);
+                point.setLatitude(-48.2222);
+                point.setMsg(msg);
+
+                Gson gson = new Gson();
+                final String pointJson = gson.toJson(point);
+                sendGetMessage(pointJson);
+            }
+        });
 
     }
 
-    private void sendMessage(final String pointJson) {
-            try {
-                Radio.getInstance().sendGet("http://persys.eprodutiva.com.br/api/organizacao/ping", ContentType.JSON, new MessageListener() {
-                    @Override
-                    public void result(ProxyRequest request, final ProxyResponse response) {
-                        MainActivity.this.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
+    private void sendGetMessage(final String pointJson) {
+        try {
+            //Radio.getInstance().sendGet("http://persys.eprodutiva.com.br/api/organizacao/ping", ContentType.JSON, new MessageListener() {
+            //Radio.getInstance().sendGet("http://www.univem.edu.br", ContentType.JSON, new MessageListener() {
+            Radio.getInstance().sendGet("http://localhost:8000", ContentType.JSON, new MessageListener() {
+                @Override
+                public void result(ProxyRequest request, final ProxyResponse response) {
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Log.i("Send GET", "Sucess.sendGet");
+                            Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
 
-                                Log.i("teste", "teste");
-                                Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void fail() {
-                        Log.i("teste", "teste");
-                    }
-                });
-            }catch (Exception e){
-                Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
-
-            }
+                @Override
+                public void fail() {
+                    Log.i(getClass().getCanonicalName(), "Fail.sendGet");
+                }
+            });
+        } catch (Exception e) {
+            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.i(getClass().getCanonicalName(), "Fail.sendGet");
+        }
     }
 
 
@@ -243,19 +239,19 @@ public class MainActivity extends AppCompatActivity{
 
     private void saveNotifyPositions() {
         SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putBoolean(NOTIFY_LOCATION, mCheckBoxNotifyPositions.isChecked());
+        editor.putBoolean(NOTIFY_LOCATION, mNotifyPositionsCheckBox.isChecked());
         editor.apply();
     }
 
     private void saveUrlBroker() {
         SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putString(URL_BROKER, mUrlBrokerEditText.getText().toString());
+        editor.putString(URL_BROKER, mMqttUrlEditText.getText().toString());
         editor.apply();
     }
 
     private void saveUrlAppServer() {
         SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putString(URL_APP_SERVER, mUrlApplicationServerEditText.getText().toString());
+        editor.putString(URL_APP_SERVER, mApplicationServerUrlEditText.getText().toString());
         editor.apply();
     }
 
@@ -286,7 +282,7 @@ public class MainActivity extends AppCompatActivity{
                             @Override
                             public void run() {
                                 Log.i("teste", "teste");
-                                Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + response.getBody().toString(), Toast.LENGTH_LONG).show();
+                                Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
                             }
                         });
                     }
@@ -359,10 +355,15 @@ public class MainActivity extends AppCompatActivity{
         return super.onOptionsItemSelected(item);
     }
 
-    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Toast.makeText(context, "Perdeu Conexao", Toast.LENGTH_LONG).show();
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.i("On Resume", "On Resume");
+        if (!Radio.mqttConnected()) {
+            mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
+        } else {
+            mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+
         }
-    };
+    }
 }
