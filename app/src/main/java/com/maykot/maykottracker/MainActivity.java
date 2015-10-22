@@ -21,21 +21,20 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.maykot.maykottracker.radio.HttpPostSerializer;
+import com.google.gson.Gson;
+import com.maykot.maykottracker.models.Point;
+import com.maykot.maykottracker.radio.ContentType;
+import com.maykot.maykottracker.radio.ProxyRequest;
+import com.maykot.maykottracker.radio.ProxyResponse;
+import com.maykot.maykottracker.radio.Radio;
 import com.maykot.maykottracker.radio.interfaces.MessageListener;
-import com.maykot.maykottracker.service.Helper;
 import com.maykot.maykottracker.service.TrackingService;
 
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-
 import java.io.ByteArrayOutputStream;
+import java.util.Date;
+import java.util.Random;
 
-public class MainActivity extends AppCompatActivity implements MqttCallback {
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     static final int REQUEST_IMAGE_CAPTURE = 1;
@@ -48,136 +47,50 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     public static final String URL_BROKER = "url_broker";
     public static final String URL_APP_SERVER = "url_app_server";
 
-    /* MQTT */
-    public static MqttClient mqttClient;
-    public static MqttConnectOptions mqttConnectOptions;
-    public static int QoS = 2;
-    public static String MQTT_CLIENT_ID = null;
-    public static String SUBSCRIBED_TOPIC = null;
-    public static final String TOPIC_HTTP_POST = "maykot/http_post/";
-
     /*  VIEW */
     private Button mMqttConnectButton;
-    private CheckBox mCheckBoxNotifyPositions;
-    private EditText mUrlBrokerEditText;
-    private EditText mUrlApplicationServerEditText;
-    private Button mSaveUrlBrokerButton;
-    private Button mSaveUrlApplicationServerButton;
+    private CheckBox mNotifyPositionsCheckBox;
     private Button mTakePictureButton;
     private Button mStartTrackingButton;
     private Button mStopTrackingButton;
-    private EditText mUserMessageEditText;
-    private Button mSendMessageButton;
+    private EditText mHttpGetEditText;
+    private Button mHttpGetSendButton;
+    private EditText mMqttUrlEditText;
+    private Button mMqttUrlSaveButton;
+    private EditText mApplicationServerUrlEditText;
+    private Button mApplicationServerUrlSaveButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Radio.getInstance();
+
         mSharedPreferences = getSharedPreferences(DEFAULT_SHARED_PREFERENCES, Context.MODE_PRIVATE);
 
         mMqttConnectButton = (Button) findViewById(R.id.btn_mqtt_connect);
+        mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
+
         mMqttConnectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mqttConnect();
+                try {
+                    Radio.getInstance().mqttConnect(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
+                    mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+                    mMqttConnectButton.setText("MQTT OK!");
+                } catch (Exception e) {
+                    e.getMessage();
+                }
             }
         });
 
-        mCheckBoxNotifyPositions = (CheckBox) findViewById(R.id.checkbox_notify_positions);
-        mCheckBoxNotifyPositions.setChecked(mSharedPreferences.getBoolean(NOTIFY_LOCATION, false));
-        mCheckBoxNotifyPositions.setOnClickListener(new View.OnClickListener() {
+        mNotifyPositionsCheckBox = (CheckBox) findViewById(R.id.checkbox_notify_positions);
+        mNotifyPositionsCheckBox.setChecked(mSharedPreferences.getBoolean(NOTIFY_LOCATION, false));
+        mNotifyPositionsCheckBox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 saveNotifyPositions();
-            }
-        });
-
-        mUrlBrokerEditText = (EditText) findViewById(R.id.edit_text_url_broker);
-        mUrlBrokerEditText.setText(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
-
-        mSaveUrlBrokerButton = (Button) findViewById(R.id.btn_save_url_broker);
-        mSaveUrlBrokerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                saveUrlBroker();
-            }
-        });
-
-        mUrlApplicationServerEditText = (EditText) findViewById(R.id.edit_text_url_application_server);
-        mUrlApplicationServerEditText.setText(mSharedPreferences.getString(URL_APP_SERVER, "http://localhost:8000"));
-
-        mSaveUrlApplicationServerButton = (Button) findViewById(R.id.btn_save_url_application_server);
-        mSaveUrlApplicationServerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                saveUrlAppServer();
-            }
-        });
-
-        mStartTrackingButton = (Button) findViewById(R.id.btn_start_tracking);
-        mStartTrackingButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
-        mStartTrackingButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startTracking();
-                mStartTrackingButton.setBackgroundColor(Color.GRAY);
-                mStartTrackingButton.setEnabled(false);
-                mStopTrackingButton.setBackgroundColor(getResources().getColor(R.color.redButton));
-                mStopTrackingButton.setEnabled(true);
-            }
-        });
-
-        mStopTrackingButton = (Button) findViewById(R.id.btn_stop_tracking);
-        mStopTrackingButton.setBackgroundColor(Color.GRAY);
-        mStopTrackingButton.setEnabled(false);
-        mStopTrackingButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stopTracking();
-                mStartTrackingButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
-                mStartTrackingButton.setEnabled(true);
-                mStopTrackingButton.setBackgroundColor(Color.GRAY);
-                mStopTrackingButton.setEnabled(false);
-            }
-        });
-
-        mTakePictureButton = (Button) findViewById(R.id.btn_take_picture);
-        mTakePictureButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dispatchTakePictureIntent();
-            }
-        });
-
-        mUserMessageEditText = (EditText) findViewById(R.id.edit_text_user_message);
-
-        mSendMessageButton = (Button) findViewById(R.id.btn_send_message);
-        mSendMessageButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String msg = "";
-                if (mUserMessageEditText != null) {
-                    msg = mUserMessageEditText.getText().toString();
-                }
-                if (msg.isEmpty()) {
-                    msg = "MensagemTeste";
-                }
-                Helper.sendMessage(MainActivity.this, msg, mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "http://localhost:8000"));
-
-
-//                Helper.sendMessage(MainActivity.this, msg, new MessageListener() {
-//
-//                    public void sucess(int status, byte[] message) {
-//
-//                    }
-//
-//                    public void timeout() {
-//
-//                    }
-//
-//                });
-
             }
         });
 
@@ -194,26 +107,123 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
             mStatusConexaoTextView.setText("Conexão 3G: " + networkInfo.getExtraInfo());
         }
 
-        mqttConnectOptions = new MqttConnectOptions();
+        mTakePictureButton = (Button) findViewById(R.id.btn_take_picture);
+        mTakePictureButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dispatchTakePictureIntent();
+            }
+        });
 
-        MQTT_CLIENT_ID = MqttClient.generateClientId();
-        Log.i("MQTT_CLIENT_ID", MQTT_CLIENT_ID);
+        mStartTrackingButton = (Button) findViewById(R.id.btn_start_tracking);
+        mStartTrackingButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+        mStartTrackingButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Radio.getInstance().startMonitor();
+                //startTracking();
+                //mStartTrackingButton.setBackgroundColor(Color.GRAY);
+                //mStartTrackingButton.setEnabled(false);
+                //mStopTrackingButton.setBackgroundColor(getResources().getColor(R.color.redButton));
+                //mStopTrackingButton.setEnabled(true);
+            }
+        });
 
-        SUBSCRIBED_TOPIC = "maykot/" + MQTT_CLIENT_ID + "/#";
-        //SUBSCRIBED_TOPIC = "maykot/teste";
-        Log.i("SUBSCRIBED_TOPIC", SUBSCRIBED_TOPIC);
+        mStopTrackingButton = (Button) findViewById(R.id.btn_stop_tracking);
+        mStopTrackingButton.setBackgroundColor(Color.GRAY);
+        mStopTrackingButton.setEnabled(true);
+        mStopTrackingButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Radio.getInstance().stopMonitor();
+                //stopTracking();
+                //mStartTrackingButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+                //mStartTrackingButton.setEnabled(true);
+                //mStopTrackingButton.setBackgroundColor(Color.GRAY);
+                //mStopTrackingButton.setEnabled(false);
+            }
+        });
+
+        mMqttUrlEditText = (EditText) findViewById(R.id.edit_text_url_broker);
+        mMqttUrlEditText.setText(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
+
+        mMqttUrlSaveButton = (Button) findViewById(R.id.btn_save_url_broker);
+        mMqttUrlSaveButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                saveUrlBroker();
+            }
+        });
+
+        mApplicationServerUrlEditText = (EditText) findViewById(R.id.edit_text_url_application_server);
+        mApplicationServerUrlEditText.setText(mSharedPreferences.getString(URL_APP_SERVER, "http://localhost:8000"));
+
+        mApplicationServerUrlSaveButton = (Button) findViewById(R.id.btn_save_url_application_server);
+        mApplicationServerUrlSaveButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                saveUrlAppServer();
+            }
+        });
+
+        mHttpGetEditText = (EditText) findViewById(R.id.edit_text_get_message);
+
+        mHttpGetSendButton = (Button) findViewById(R.id.btn_send_http_get);
+        mHttpGetSendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String msg = "";
+                if (mHttpGetEditText != null) {
+                    msg = mHttpGetEditText.getText().toString();
+                }
+                if (msg.isEmpty()) {
+                    msg = "MensagemTeste";
+                }
+
+                Point point = new Point();
+                point.setAccuracy(new Random().nextInt(20));
+                point.setCreatedAt(new Date());
+                point.setUploaded(true);
+                point.setSpeed(new Random().nextInt(20));
+                point.setLatitude(-22.2222);
+                point.setLatitude(-48.2222);
+                point.setMsg(msg);
+
+                Gson gson = new Gson();
+                final String pointJson = gson.toJson(point);
+                sendGetMessage(pointJson);
+            }
+        });
+
     }
 
-    private void mqttConnect() {
+    private void sendGetMessage(final String pointJson) {
         try {
-            mqttClient = new MqttClient(mSharedPreferences.getString(URL_BROKER, "tcp://iot.eclipse.org:1883"), MQTT_CLIENT_ID, null);
-            mqttClient.setCallback(this);
-            mqttClient.connect();
-            mqttClient.subscribe(SUBSCRIBED_TOPIC, QoS);
-        } catch (MqttException e1) {
-            e1.printStackTrace();
+            //Radio.getInstance().sendGet("http://persys.eprodutiva.com.br/api/organizacao/ping", ContentType.JSON, new MessageListener() {
+            //Radio.getInstance().sendGet("http://www.univem.edu.br", ContentType.JSON, new MessageListener() {
+            Radio.getInstance().sendGet("http://localhost:8000", ContentType.JSON, new MessageListener() {
+                @Override
+                public void result(ProxyRequest request, final ProxyResponse response) {
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Log.i("Send GET", "Sucess.sendGet");
+                            Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+
+                @Override
+                public void fail() {
+                    Log.i(getClass().getCanonicalName(), "Fail.sendGet");
+                }
+            });
+        } catch (Exception e) {
+            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.i(getClass().getCanonicalName(), "Fail.sendGet");
         }
     }
+
 
     private void startTracking() {
         Log.i(TAG, "Starting tracking");
@@ -229,19 +239,19 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
 
     private void saveNotifyPositions() {
         SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putBoolean(NOTIFY_LOCATION, mCheckBoxNotifyPositions.isChecked());
+        editor.putBoolean(NOTIFY_LOCATION, mNotifyPositionsCheckBox.isChecked());
         editor.apply();
     }
 
     private void saveUrlBroker() {
         SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putString(URL_BROKER, mUrlBrokerEditText.getText().toString());
+        editor.putString(URL_BROKER, mMqttUrlEditText.getText().toString());
         editor.apply();
     }
 
     private void saveUrlAppServer() {
         SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putString(URL_APP_SERVER, mUrlApplicationServerEditText.getText().toString());
+        editor.putString(URL_APP_SERVER, mApplicationServerUrlEditText.getText().toString());
         editor.apply();
     }
 
@@ -255,9 +265,6 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            if (!mqttClient.isConnected()) {
-                mqttConnect();
-            }
 
             Bundle extras = data.getExtras();
             Bitmap imageBitmap = (Bitmap) extras.get("data");
@@ -265,19 +272,27 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             resizedImage.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
-            byte[] imagemToSend = byteArrayOutputStream.toByteArray();
+            final byte[] imagemToSend = byteArrayOutputStream.toByteArray();
+            //radio.sendPost("http://localhost:8000", ContentType.IMAGE, imagemToSend, this);
+            try {
+                Radio.getInstance().sendPost("http://localhost:8000", ContentType.IMAGE, imagemToSend, new MessageListener() {
+                    @Override
+                    public void result(ProxyRequest request, final ProxyResponse response) {
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.i("teste", "teste");
+                                Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
 
-            byte[] dataToSend = HttpPostSerializer.dataToPost(mSharedPreferences.getString(URL_APP_SERVER, "http://localhost:8000"), "image/png", imagemToSend);
-
-            if (mqttClient.isConnected()) {
-                try {
-                    MqttMessage mqttMessage = new MqttMessage();
-                    mqttMessage.setQos(QoS);
-                    mqttMessage.setPayload(dataToSend);
-                    mqttClient.publish(TOPIC_HTTP_POST + MQTT_CLIENT_ID, mqttMessage);
-                } catch (MqttException e) {
-                    Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
-                }
+                    @Override
+                    public void fail() {
+                    }
+                });
+            } catch (Exception e) {
+                Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -340,36 +355,15 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         return super.onOptionsItemSelected(item);
     }
 
-    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Toast.makeText(context, "Perdeu Conexao", Toast.LENGTH_LONG).show();
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.i("On Resume", "On Resume");
+        if (!Radio.mqttConnected()) {
+            mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
+        } else {
+            mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+
         }
-    };
-
-    @Override
-    public void connectionLost(Throwable throwable) {
-
-    }
-
-    /**
-     * Este callback roda em uma thread separada. Atualizações na view deverão ser feitas chamando
-     * o método runOnUiThread().
-     */
-    @Override
-    public void messageArrived(String topic, final MqttMessage mqttMessage) throws Exception {
-        MainActivity.this.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                // Log.i("run", "Rodando na thread:" + android.os.Process.getThreadPriority(android.os.Process.myTid()));
-                String response = new String(mqttMessage.getPayload());
-                Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + response, Toast.LENGTH_LONG).show();
-            }
-        });
-    }
-
-    @Override
-    public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
-
     }
 }

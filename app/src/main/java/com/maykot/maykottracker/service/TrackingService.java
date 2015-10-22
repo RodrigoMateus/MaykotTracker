@@ -83,14 +83,6 @@ public class TrackingService extends Service {
                 // Acquire a reference to the system Location Manager
                 mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-                if (!MainActivity.mqttClient.isConnected()) {
-                    try {
-                        MainActivity.mqttClient.connect(MainActivity.mqttConnectOptions);
-                    } catch (MqttException e) {
-                        Log.d(getClass().getCanonicalName(), "Connection attempt failed with reason code = " + e.getReasonCode() + ":" + e.getCause());
-                    }
-                }
-
                 // Define a listener that responds to location updates
                 mLocationListener = new LocationListener() {
                     public void onLocationChanged(Location location) {
@@ -164,22 +156,11 @@ public class TrackingService extends Service {
     }
 
     private void publishPoint(Point point) {
-        if (MainActivity.mqttClient.isConnected()) {
-
             Gson gson = new Gson();
             String pointJson = gson.toJson(point);
 
-            byte[] dataToSend = HttpPostSerializer.dataToPost(mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "http://localhost:8000"), "application/json", pointJson.getBytes());
+            //byte[] dataToSend = HttpPostSerializer.dataToPost(mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "http://localhost:8000"), "application/json", pointJson.getBytes());
 
-            try {
-                MqttMessage mqttMessage = new MqttMessage();
-                mqttMessage.setQos(MainActivity.QoS);
-                mqttMessage.setPayload(dataToSend);
-                MainActivity.mqttClient.publish(MainActivity.TOPIC_HTTP_POST + MainActivity.MQTT_CLIENT_ID, mqttMessage);
-            } catch (MqttException e) {
-                Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
-            }
-        }
     }
 
     private void notifyPoint(final Point point) {
