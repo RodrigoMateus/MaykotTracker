@@ -1,13 +1,13 @@
 package com.maykot.maykottracker.radio;
 
-class Payload{
+class Payload {
 
-    public byte[] data;
-    public String message;
+    public String messageId;
+    public byte[] messageData;
 
-    public Payload(String message,byte[] data){
-        this.data = data;
-        this.message = message;
+    public Payload(String messageId, byte[] messageData) {
+        this.messageId = messageId;
+        this.messageData = messageData;
     }
 
 }

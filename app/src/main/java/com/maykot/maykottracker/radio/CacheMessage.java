@@ -1,48 +1,86 @@
 package com.maykot.maykottracker.radio;
 
+import android.util.Log;
+
 import com.maykot.maykottracker.radio.interfaces.MessageListener;
 
 import java.util.HashMap;
 
-/**
- * Created by sabatine on 16/10/15.
- */
 public class CacheMessage {
-    HashMap<String, MessageListener> hashMap = new HashMap<>();
-    HashMap<String, ProxyRequest> hashMapRequest = new HashMap<>();
+
+    int bufferSize = 3;
+    int position = -1;
+    HashMap<Integer, String> positionHashMap = new HashMap<>();
+    HashMap<String, MessageListener> messageListenerHashMap = new HashMap<>();
+    HashMap<String, ProxyRequest> requestHashMap = new HashMap<>();
 
     private static CacheMessage cacheMessage;
 
-    public static CacheMessage getInstance(){
-           if(cacheMessage == null){
-               cacheMessage = new CacheMessage();
-           }
+    public static CacheMessage getInstance() {
+        if (cacheMessage == null) {
+            cacheMessage = new CacheMessage();
+        }
         return cacheMessage;
     }
 
-    public void addMessage(String idMessage, MessageListener messageListener, ProxyRequest request)
-    {
-        hashMap.put(idMessage,messageListener);
-        hashMapRequest.put(idMessage, request);
+    public void addMessage(String idMessage, MessageListener messageListener, ProxyRequest request) {
+        setMessagePosition();
+        removeOldMessage(position);
+        positionHashMap.put(position, idMessage);
+        messageListenerHashMap.put(idMessage, messageListener);
+        requestHashMap.put(idMessage, request);
+
+        Log.i("CacheMessage.size: ", size() + " ");
     }
 
-    public void removeMessage(String idMessage){
-        hashMap.remove(idMessage);
+    public void setMessagePosition() {
+        if (position < bufferSize - 1) {
+            position++;
+        } else {
+            position = 0;
+        }
     }
 
-    public int size(){
-       return hashMap.size();
+    public void removeOldMessage(int position) {
+        removeMessageListener(positionHashMap.get(position));
+        removeRequest(positionHashMap.get(position));
+        removePosition(position);
     }
 
-    public MessageListener findMessage(String idMessage){
-        return hashMap.get(idMessage);
+    public void removeMessageListener(String idMessage) {
+        try {
+            messageListenerHashMap.remove(idMessage);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    public void removeRequest(String idMessage){
-        hashMapRequest.remove(idMessage);
+    public void removeRequest(String idMessage) {
+        try {
+            requestHashMap.remove(idMessage);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    public ProxyRequest findRequest(String idMessage){
-        return hashMapRequest.get(idMessage);
+    public void removePosition(int count) {
+        try {
+            positionHashMap.remove(count);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
+    public MessageListener findMessage(String idMessage) {
+        return messageListenerHashMap.get(idMessage);
+    }
+
+    public ProxyRequest findRequest(String idMessage) {
+        return requestHashMap.get(idMessage);
+    }
+
+    public int size() {
+        return messageListenerHashMap.size();
+    }
+
 }

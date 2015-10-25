@@ -17,13 +17,19 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
+import com.maykot.maykottracker.radio.ContentType;
 import com.maykot.maykottracker.radio.HttpPostSerializer;
 import com.maykot.maykottracker.MainActivity;
 import com.maykot.maykottracker.R;
 import com.maykot.maykottracker.dao.DBManager;
 import com.maykot.maykottracker.models.Point;
+import com.maykot.maykottracker.radio.ProxyRequest;
+import com.maykot.maykottracker.radio.ProxyResponse;
+import com.maykot.maykottracker.radio.Radio;
+import com.maykot.maykottracker.radio.interfaces.MessageListener;
 
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -31,6 +37,8 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.logging.Handler;
 
 public class TrackingService extends Service {
 
@@ -156,11 +164,33 @@ public class TrackingService extends Service {
     }
 
     private void publishPoint(Point point) {
-            Gson gson = new Gson();
-            String pointJson = gson.toJson(point);
+        Gson gson = new Gson();
+        String pointJson = gson.toJson(point);
 
-            //byte[] dataToSend = HttpPostSerializer.dataToPost(mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "http://localhost:8000"), "application/json", pointJson.getBytes());
+        try {
+            HashMap<String, String> header = new HashMap<>();
+            header.put("content-type", ContentType.JSON.getType());
 
+            Radio.getInstance().sendPost(
+                    mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "http://localhost:8000"),
+                    header, pointJson.getBytes(),
+                    new MessageListener() {
+
+                        @Override
+                        public void result(ProxyRequest request, final ProxyResponse response) {
+                            Log.i("Tracking", "POST Response: " + new String(response.getBody()));
+                            Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
+                        }
+
+                        @Override
+                        public void fail() {
+                            Log.i("Main.MessageListener", "Fail.sendPost");
+                        }
+                    });
+        } catch (Exception e) {
+            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.i("Main.sendGetMessage", "Fail.sendPost");
+        }
     }
 
     private void notifyPoint(final Point point) {

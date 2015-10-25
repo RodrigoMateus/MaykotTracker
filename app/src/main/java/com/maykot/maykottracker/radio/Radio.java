@@ -1,10 +1,6 @@
 package com.maykot.maykottracker.radio;
 
-import android.app.Activity;
-import android.graphics.Bitmap;
-import android.os.Bundle;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.maykot.maykottracker.radio.interfaces.MessageListener;
 
@@ -15,8 +11,8 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
-import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
+import java.util.HashMap;
 
 public class Radio implements MqttCallback, Serializable {
 
@@ -129,7 +125,7 @@ public class Radio implements MqttCallback, Serializable {
     }
 
 
-    public void sendPost(String endPoint, ContentType contentType, byte[] data, MessageListener messageListener)
+    public void sendPost(String urlCloud, HashMap<String, String> header, byte[] data, MessageListener messageListener)
             throws Exception {
 
         if (!mqttClient.isConnected()) {
@@ -139,7 +135,7 @@ public class Radio implements MqttCallback, Serializable {
         Payload dataToSend;
 
         try {
-            dataToSend = HttpPostSerializer.dataToPost(endPoint, contentType.getType(),
+            dataToSend = HttpPostSerializer.dataToPost(urlCloud, header,
                     data, messageListener);
         } catch (Exception e) {
             throw new Exception("Serializer Payload - " + e.getMessage());
@@ -148,8 +144,8 @@ public class Radio implements MqttCallback, Serializable {
             try {
                 MqttMessage mqttMessage = new MqttMessage();
                 mqttMessage.setQos(QoS);
-                mqttMessage.setPayload(dataToSend.data);
-                mqttClient.publish(TOPIC_HTTP_POST + MQTT_CLIENT_ID + "/" + dataToSend.message, mqttMessage);
+                mqttMessage.setPayload(dataToSend.messageData);
+                mqttClient.publish(TOPIC_HTTP_POST + MQTT_CLIENT_ID + "/" + dataToSend.messageId, mqttMessage);
             } catch (MqttException e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
                 throw new Exception("Publish failed with reason code = " + e.getReasonCode());
@@ -157,14 +153,17 @@ public class Radio implements MqttCallback, Serializable {
         }
     }
 
-    public void sendGet(String endPoint, ContentType contentType, MessageListener messageListener)
+    public void sendGet(String urlCloud, HashMap<String, String> header, MessageListener messageListener)
             throws Exception {
 
+        if (!mqttClient.isConnected()) {
+            throw new Exception("Client MQTT not conntect");
+        }
 
         Payload dataToSend;
 
         try {
-            dataToSend = HttpPostSerializer.dataToGet(endPoint, contentType.getType(), messageListener);
+            dataToSend = HttpPostSerializer.dataToGet(urlCloud, header, messageListener);
         } catch (Exception e) {
             throw new Exception("Serializer Payload - " + e.getMessage());
         }
@@ -172,32 +171,37 @@ public class Radio implements MqttCallback, Serializable {
             try {
                 MqttMessage mqttMessage = new MqttMessage();
                 mqttMessage.setQos(QoS);
-                mqttMessage.setPayload(dataToSend.data);
-                mqttClient.publish(TOPIC_HTTP_POST + MQTT_CLIENT_ID + "/" + dataToSend.message, mqttMessage);
+                mqttMessage.setPayload(dataToSend.messageData);
+                mqttClient.publish(TOPIC_HTTP_POST + MQTT_CLIENT_ID + "/" + dataToSend.messageId, mqttMessage);
             } catch (MqttException e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
                 throw new Exception("Publish failed with reason code = " + e.getReasonCode());
+            } catch (Exception ex) {
+                Log.i("sendGet.exception", "Falhou!", ex);
             }
         }
     }
 
     @Override
     public void connectionLost(Throwable throwable) {
-
+        Log.i("mqqt lost ", throwable.getMessage());
     }
 
-    /**
-     * Este callback roda em uma thread separada. Atualizações na view deverão ser feitas chamando
-     * o método runOnUiThread().
-     */
     @Override
     public void messageArrived(String topic, final MqttMessage mqttMessage) throws Exception {
+
         returnResult(mqttMessage);
     }
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
-
+//        try {
+//            Log.i("mqqt ", iMqttDeliveryToken.getMessage().toString());
+//        } catch (MqttException e) {
+//            Log.i("mqqt deliveryComplete", e.getMessage());
+//        } catch (Exception ex) {
+//            Log.i("mqqt deliveryComplete", ex.getMessage(), ex);
+//        }
     }
 
     private void returnResult(MqttMessage mqttMessage) {
@@ -209,11 +213,8 @@ public class Radio implements MqttCallback, Serializable {
 
             messageListener.result(request, response);
 
-            CacheMessage.getInstance().removeMessage(response.getIdMessage());
-            CacheMessage.getInstance().removeRequest(response.getIdMessage());
         } catch (Exception e) {
             e.getMessage();
         }
     }
-
 }
