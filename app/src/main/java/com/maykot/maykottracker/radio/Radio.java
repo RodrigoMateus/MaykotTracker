@@ -182,6 +182,22 @@ public class Radio implements MqttCallback, Serializable {
         }
     }
 
+    public void sendCommand(String command) {
+
+        if (mqttClient.isConnected()) {
+            try {
+                MqttMessage mqttMessage = new MqttMessage();
+                mqttMessage.setQos(QoS);
+                mqttMessage.setPayload(command.getBytes());
+                mqttClient.publish("maykot/command", mqttMessage);
+            } catch (MqttException e) {
+                Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
+            } catch (Exception ex) {
+                Log.i("sendCommand.exception", "Falhou!", ex);
+            }
+        }
+    }
+
     @Override
     public void connectionLost(Throwable throwable) {
         Log.i("mqqt lost ", throwable.getMessage());

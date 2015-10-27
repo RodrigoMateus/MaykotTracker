@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -20,19 +21,17 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.gson.Gson;
-import com.maykot.maykottracker.models.Point;
+import com.maykot.maykottracker.radio.Command;
 import com.maykot.maykottracker.radio.ContentType;
 import com.maykot.maykottracker.radio.ProxyRequest;
 import com.maykot.maykottracker.radio.ProxyResponse;
 import com.maykot.maykottracker.radio.Radio;
+import com.maykot.maykottracker.radio.commandSSH;
 import com.maykot.maykottracker.radio.interfaces.MessageListener;
 import com.maykot.maykottracker.service.TrackingService;
 
 import java.io.ByteArrayOutputStream;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,7 +48,10 @@ public class MainActivity extends AppCompatActivity {
 
     /*  VIEW */
     private Button mMqttConnectButton;
+    private Button mRouterResetButton;
+    private Button mRadioResetButton;
     private CheckBox mNotifyPositionsCheckBox;
+    private TextView mStatusConexaoTextView;
     private Button mTakePictureButton;
     private Button mStartTrackingButton;
     private Button mStopTrackingButton;
@@ -85,6 +87,28 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mRouterResetButton = (Button) findViewById(R.id.btn_router_reset);
+        mRouterResetButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    String sshResult = new commandSSH().execute("sudo ./radiostart.sh stop\n" +
+                            "sudo ./radiostart.sh start").get();
+                    Toast.makeText(getApplicationContext(), sshResult, Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        mRadioResetButton = (Button) findViewById(R.id.btn_radio_reset);
+        mRadioResetButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Radio.getInstance().sendCommand(Command.RESET.getCommand());
+            }
+        });
+
         mNotifyPositionsCheckBox = (CheckBox) findViewById(R.id.checkbox_notify_positions);
         mNotifyPositionsCheckBox.setChecked(mSharedPreferences.getBoolean(NOTIFY_LOCATION, false));
         mNotifyPositionsCheckBox.setOnClickListener(new View.OnClickListener() {
@@ -94,18 +118,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        TextView mStatusConexaoTextView;
         mStatusConexaoTextView = (TextView) findViewById(R.id.txtView_connection_status);
-        int connected = checkNetworkConnection(this);
-        if (connected == 0) {
-            mStatusConexaoTextView.setText("Sem Conexão");
-        }
-        if (connected == 1) {
-            mStatusConexaoTextView.setText("Conexão WiFi: " + networkInfo.getExtraInfo());
-        }
-        if (connected == 2) {
-            mStatusConexaoTextView.setText("Conexão 3G: " + networkInfo.getExtraInfo());
-        }
+        checkStatusConnection(mStatusConexaoTextView);
 
         mTakePictureButton = (Button) findViewById(R.id.btn_take_picture);
         mTakePictureButton.setOnClickListener(new View.OnClickListener() {
@@ -144,6 +158,17 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mHttpGetEditText = (EditText) findViewById(R.id.edit_text_get_message);
+
+        mHttpGetSendButton = (Button) findViewById(R.id.btn_send_http_get);
+        mHttpGetSendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String urlToGet = "http://localhost:8000";
+                sendGetMessage(urlToGet);
+            }
+        });
+
         mMqttUrlEditText = (EditText) findViewById(R.id.edit_text_url_broker);
         mMqttUrlEditText.setText(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
 
@@ -165,40 +190,6 @@ public class MainActivity extends AppCompatActivity {
                 saveUrlAppServer();
             }
         });
-
-        mHttpGetEditText = (EditText) findViewById(R.id.edit_text_get_message);
-
-        mHttpGetSendButton = (Button) findViewById(R.id.btn_send_http_get);
-        mHttpGetSendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-//                String msg = "";
-//                if (mHttpGetEditText != null) {
-//                    msg = mHttpGetEditText.getText().toString();
-//                }
-//                if (msg.isEmpty()) {
-//                    msg = "MensagemTeste";
-//                }
-//
-//                Point point = new Point();
-//                point.setAccuracy(new Random().nextInt(20));
-//                point.setCreatedAt(new Date());
-//                point.setUploaded(true);
-//                point.setSpeed(new Random().nextInt(20));
-//                point.setLatitude(-22.2222);
-//                point.setLatitude(-48.2222);
-//                point.setMsg(msg);
-//
-//                Gson gson = new Gson();
-//                final String pointJson = gson.toJson(point);
-
-                //String urlToGet = "http://persys.eprodutiva.com.br/api/organizacao/ping";
-                //String urlToGet = "http://univem.edu.br";
-                String urlToGet = "https://www.googleapis.com/auth/drive";
-                sendGetMessage(urlToGet);
-            }
-        });
-
     }
 
     private void sendGetMessage(String urlToGet) {
@@ -215,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
                                 @Override
                                 public void run() {
                                     Log.i("GET Button", "Sucess.sendGet");
-                                    Toast.makeText(getApplicationContext(), "GET Button Response: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
+                                    Toast.makeText(getApplicationContext(), "GET Button Response: " + new String(response.getIdMessage()), Toast.LENGTH_LONG).show();
                                 }
                             });
                         }
@@ -310,7 +301,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public int checkNetworkConnection(Context context) {
+    public int checkTypeConnection(Context context) {
         int connected;
         ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         networkInfo = connectivityManager.getActiveNetworkInfo();
@@ -368,10 +359,33 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    public void checkStatusConnection(TextView mStatusConexaoTextView) {
+        int connected = checkTypeConnection(this);
+        if (connected == 0) {
+            mStatusConexaoTextView.setText("Sem Conexão");
+            mStatusConexaoTextView.setTypeface(null, Typeface.BOLD_ITALIC);
+            mStatusConexaoTextView.setTextColor(Color.RED);
+            mStatusConexaoTextView.setBackgroundColor(Color.YELLOW);
+        }
+        if (connected == 1) {
+            mStatusConexaoTextView.setText("Conexão WiFi: " + networkInfo.getExtraInfo());
+            mStatusConexaoTextView.setTypeface(null, Typeface.NORMAL);
+            mStatusConexaoTextView.setTextColor(Color.BLACK);
+            mStatusConexaoTextView.setBackgroundColor(Color.TRANSPARENT);
+        }
+        if (connected == 2) {
+            mStatusConexaoTextView.setText("Conexão 3G: " + networkInfo.getExtraInfo());
+            mStatusConexaoTextView.setTypeface(null, Typeface.NORMAL);
+            mStatusConexaoTextView.setTextColor(Color.BLACK);
+            mStatusConexaoTextView.setBackgroundColor(Color.TRANSPARENT);
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
         Log.i("On Resume", "On Resume");
+        checkStatusConnection(mStatusConexaoTextView);
         if (Radio.mqttConnected()) {
             mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
             mMqttConnectButton.setText("MQTT OK!");
