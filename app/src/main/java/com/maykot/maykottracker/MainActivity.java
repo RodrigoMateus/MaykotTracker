@@ -78,9 +78,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 try {
-                    Radio.getInstance().mqttConnect(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
-                    mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
-                    mMqttConnectButton.setText("MQTT\nOK!");
+                    if (Radio.getInstance().mqttConnect(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"))) {
+                        mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+                        mMqttConnectButton.setText("MQTT\nOK!");
+                    }
+
                 } catch (Exception e) {
                     e.getMessage();
                 }
@@ -105,7 +107,14 @@ public class MainActivity extends AppCompatActivity {
         mRadioResetButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Radio.getInstance().sendCommand(Command.RESET.getCommand());
+                try {
+                    if (Radio.getInstance().sendCommand(Command.RESET.getCommand())) {
+                        Toast.makeText(getApplicationContext(), "Radio RESET OK!", Toast.LENGTH_LONG).show();
+                    }
+                } catch (Exception e) {
+                    Toast.makeText(getApplicationContext(), "Radio RESET Falhou!!", Toast.LENGTH_LONG).show();
+                    e.printStackTrace();
+                }
             }
         });
 

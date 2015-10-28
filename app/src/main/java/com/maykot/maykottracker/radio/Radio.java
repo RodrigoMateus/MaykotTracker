@@ -36,7 +36,7 @@ public class Radio implements MqttCallback, Serializable {
         return radio;
     }
 
-    public void mqttConnect(String urlMQTT) throws Exception {
+    public boolean mqttConnect(String urlMQTT) throws Exception {
         this.urlMQTT = urlMQTT;
 
         if (urlMQTT == null) {
@@ -56,8 +56,10 @@ public class Radio implements MqttCallback, Serializable {
             mqttClient.setCallback(this);
             mqttClient.connect();
             mqttClient.subscribe(SUBSCRIBED_TOPIC, QoS);
+            return true;
         } catch (MqttException e1) {
             //throw new Exception(e1);
+            return false;
         }
     }
 
@@ -182,7 +184,7 @@ public class Radio implements MqttCallback, Serializable {
         }
     }
 
-    public void sendCommand(String command) {
+    public boolean sendCommand(String command) {
 
         if (mqttClient.isConnected()) {
             try {
@@ -190,12 +192,16 @@ public class Radio implements MqttCallback, Serializable {
                 mqttMessage.setQos(QoS);
                 mqttMessage.setPayload(command.getBytes());
                 mqttClient.publish("maykot/" + MQTT_CLIENT_ID + "/command", mqttMessage);
+                return true;
             } catch (MqttException e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
+                return false;
             } catch (Exception ex) {
                 Log.i("sendCommand.exception", "Falhou!", ex);
+                return false;
             }
         }
+        return false;
     }
 
     @Override
