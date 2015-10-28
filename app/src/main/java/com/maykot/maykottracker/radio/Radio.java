@@ -189,7 +189,7 @@ public class Radio implements MqttCallback, Serializable {
                 MqttMessage mqttMessage = new MqttMessage();
                 mqttMessage.setQos(QoS);
                 mqttMessage.setPayload(command.getBytes());
-                mqttClient.publish("maykot/command", mqttMessage);
+                mqttClient.publish("maykot/" + MQTT_CLIENT_ID + "/command", mqttMessage);
             } catch (MqttException e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
             } catch (Exception ex) {
@@ -206,7 +206,11 @@ public class Radio implements MqttCallback, Serializable {
     @Override
     public void messageArrived(String topic, final MqttMessage mqttMessage) throws Exception {
 
-        returnResult(mqttMessage);
+        if (topic.contains("commandResult")) {
+            Log.i("commandResult", new String(mqttMessage.getPayload()));
+        } else {
+            returnResult(mqttMessage);
+        }
     }
 
     @Override

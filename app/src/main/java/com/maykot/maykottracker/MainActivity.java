@@ -26,7 +26,7 @@ import com.maykot.maykottracker.radio.ContentType;
 import com.maykot.maykottracker.radio.ProxyRequest;
 import com.maykot.maykottracker.radio.ProxyResponse;
 import com.maykot.maykottracker.radio.Radio;
-import com.maykot.maykottracker.radio.commandSSH;
+import com.maykot.maykottracker.radio.CommandSSH;
 import com.maykot.maykottracker.radio.interfaces.MessageListener;
 import com.maykot.maykottracker.service.TrackingService;
 
@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     Radio.getInstance().mqttConnect(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
                     mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
-                    mMqttConnectButton.setText("MQTT OK!");
+                    mMqttConnectButton.setText("MQTT\nOK!");
                 } catch (Exception e) {
                     e.getMessage();
                 }
@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 try {
-                    String sshResult = new commandSSH().execute("sudo ./radiostart.sh stop\n" +
+                    String sshResult = new CommandSSH().execute("sudo ./radiostart.sh stop\n" +
                             "sudo ./radiostart.sh start").get();
                     Toast.makeText(getApplicationContext(), sshResult, Toast.LENGTH_LONG).show();
                 } catch (Exception e) {
@@ -388,10 +388,10 @@ public class MainActivity extends AppCompatActivity {
         checkStatusConnection(mStatusConexaoTextView);
         if (Radio.mqttConnected()) {
             mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
-            mMqttConnectButton.setText("MQTT OK!");
+            mMqttConnectButton.setText("MQTT\nOK!");
         } else {
             mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
-            mMqttConnectButton.setText("Conectar MQTT");
+            mMqttConnectButton.setText("Conectar\nMQTT");
         }
     }
 }
