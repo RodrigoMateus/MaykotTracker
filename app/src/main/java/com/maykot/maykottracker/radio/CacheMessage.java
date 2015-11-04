@@ -8,7 +8,7 @@ import java.util.HashMap;
 
 public class CacheMessage {
 
-    int bufferSize = 3;
+    int bufferSize = 30;
     int position = -1;
     HashMap<Integer, String> positionHashMap = new HashMap<>();
     HashMap<String, MessageListener> messageListenerHashMap = new HashMap<>();

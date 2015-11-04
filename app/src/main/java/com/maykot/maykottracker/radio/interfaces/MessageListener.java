@@ -9,6 +9,4 @@ public interface MessageListener extends Serializable {
 
     void result(ProxyRequest request, ProxyResponse response);
 
-    void fail();
-
 }

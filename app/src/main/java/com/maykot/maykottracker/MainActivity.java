@@ -57,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
     private Button mStopTrackingButton;
     private EditText mHttpGetEditText;
     private Button mHttpGetSendButton;
+    private EditText mHttpPostEditText;
+    private Button mHttpPostSendButton;
     private EditText mMqttUrlEditText;
     private Button mMqttUrlSaveButton;
     private EditText mApplicationServerUrlEditText;
@@ -178,6 +180,17 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mHttpPostEditText = (EditText) findViewById(R.id.edit_text_post_message);
+
+        mHttpPostSendButton = (Button) findViewById(R.id.btn_send_http_post);
+        mHttpPostSendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String urlToGet = "http://localhost:8000";
+                sendPostMessage(urlToGet);
+            }
+        });
+
         mMqttUrlEditText = (EditText) findViewById(R.id.edit_text_url_broker);
         mMqttUrlEditText.setText(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
 
@@ -199,6 +212,8 @@ public class MainActivity extends AppCompatActivity {
                 saveUrlAppServer();
             }
         });
+
+
     }
 
     private void sendGetMessage(String urlToGet) {
@@ -215,14 +230,46 @@ public class MainActivity extends AppCompatActivity {
                                 @Override
                                 public void run() {
                                     Log.i("GET Button", "Sucess.sendGet");
-                                    Toast.makeText(getApplicationContext(), "GET Button Response: " + new String(response.getIdMessage()), Toast.LENGTH_LONG).show();
+                                    Toast.makeText(getApplicationContext(), "GET Button Response: \n" +
+                                            new String(response.getIdMessage()) + "\n" +
+                                            new String(response.getBody()) + "\n" +
+                                            "StatusCode:  " +
+                                            response.getStatusCode(), Toast.LENGTH_LONG).show();
                                 }
                             });
                         }
+                    });
+        } catch (Exception e) {
+            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+            Log.i("Main.sendGetMessage", "Fail.sendGet");
+        }
+    }
+
+    private void sendPostMessage(String urlToGet) {
+        try {
+            HashMap<String, String> header = new HashMap<>();
+            header.put("content-type", ContentType.JSON.getType());
+
+            String text = mHttpPostEditText.getText().toString();
+            if (text.isEmpty())
+                text = "vazio";
+
+            Radio.getInstance().sendPost(urlToGet, header, text.getBytes(),
+                    new MessageListener() {
 
                         @Override
-                        public void fail() {
-                            Log.i("Main.MessageListener", "Fail.sendGet");
+                        public void result(final ProxyRequest request, final ProxyResponse response) {
+                            MainActivity.this.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Log.i("Post Button", "Sucess.sendPOst");
+                                    Toast.makeText(getApplicationContext(), "Post Button Response: " +
+                                            new String(response.getIdMessage()) + "\n" +
+                                            new String(response.getBody()) + "\n" +
+                                            "StatusCode:  " +
+                                            response.getStatusCode(), Toast.LENGTH_LONG).show();
+                                }
+                            });
                         }
                     });
         } catch (Exception e) {
@@ -297,11 +344,6 @@ public class MainActivity extends AppCompatActivity {
                                         Toast.makeText(getApplicationContext(), "POST Response: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
                                     }
                                 });
-                            }
-
-                            @Override
-                            public void fail() {
-
                             }
                         });
             } catch (Exception e) {

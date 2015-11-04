@@ -178,13 +178,12 @@ public class TrackingService extends Service {
 
                         @Override
                         public void result(ProxyRequest request, final ProxyResponse response) {
-                            Log.i("Tracking", "POST Response: " + new String(response.getBody()));
-                            Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
-                        }
-
-                        @Override
-                        public void fail() {
-                            Log.i("Main.MessageListener", "Fail.sendPost");
+                            Log.i("Tracking", "Tracking Result: " + new String(response.getBody()));
+                            Toast.makeText(getApplicationContext(), "Tracking Result: " +
+                                    new String(response.getIdMessage()) + "\n" +
+                                    new String(response.getBody()) + "\n" +
+                                    "StatusCode:  " +
+                                    response.getStatusCode(), Toast.LENGTH_LONG).show();
                         }
                     });
         } catch (Exception e) {
