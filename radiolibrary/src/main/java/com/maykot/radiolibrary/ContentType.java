@@ -1,4 +1,4 @@
-package com.maykot.maykottracker.radio;
+package com.maykot.radiolibrary;
 
 /**
  * Created by sabatine on 16/10/15.
