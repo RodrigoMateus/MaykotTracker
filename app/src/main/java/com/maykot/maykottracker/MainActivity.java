@@ -21,14 +21,14 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.maykot.maykottracker.radio.Command;
-import com.maykot.maykottracker.radio.ContentType;
-import com.maykot.maykottracker.radio.ProxyRequest;
-import com.maykot.maykottracker.radio.ProxyResponse;
-import com.maykot.maykottracker.radio.Radio;
-import com.maykot.maykottracker.radio.CommandSSH;
-import com.maykot.maykottracker.radio.interfaces.MessageListener;
 import com.maykot.maykottracker.service.TrackingService;
+import com.maykot.radiolibrary.Command;
+import com.maykot.radiolibrary.CommandSSH;
+import com.maykot.radiolibrary.ContentType;
+import com.maykot.radiolibrary.ProxyRequest;
+import com.maykot.radiolibrary.ProxyResponse;
+import com.maykot.radiolibrary.Radio;
+import com.maykot.radiolibrary.interfaces.MessageListener;
 
 import java.io.ByteArrayOutputStream;
 import java.util.HashMap;

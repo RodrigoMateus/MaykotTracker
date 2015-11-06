@@ -20,25 +20,20 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
-import com.maykot.maykottracker.radio.ContentType;
-import com.maykot.maykottracker.radio.HttpPostSerializer;
 import com.maykot.maykottracker.MainActivity;
 import com.maykot.maykottracker.R;
 import com.maykot.maykottracker.dao.DBManager;
 import com.maykot.maykottracker.models.Point;
-import com.maykot.maykottracker.radio.ProxyRequest;
-import com.maykot.maykottracker.radio.ProxyResponse;
-import com.maykot.maykottracker.radio.Radio;
-import com.maykot.maykottracker.radio.interfaces.MessageListener;
-
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
+import com.maykot.radiolibrary.ContentType;
+import com.maykot.radiolibrary.ProxyRequest;
+import com.maykot.radiolibrary.ProxyResponse;
+import com.maykot.radiolibrary.Radio;
+import com.maykot.radiolibrary.interfaces.MessageListener;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.logging.Handler;
 
 public class TrackingService extends Service {
 
