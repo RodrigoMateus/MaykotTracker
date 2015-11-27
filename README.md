@@ -16,7 +16,7 @@ A biblioteca RadioLibrary é uma interface entre um aplicativo móvel e um servi
 - Publicar dados gerados pelo aplicativo móvel para um servidor MQTT.
 - Receber mensagem MQTT e encaminhar os dados para o aplicativo móvel.
 
-## Nota de Liberação Simplex versão 1.3
+## Nota de Liberação Maykot Tracker e biblioteca RadioLibrary versão 1.3
 
 ### Introdução
 Este documento provê uma visão geral da versão do aplicativo Maykot Tracker e da biblioteca RadioLibrary que está sendo liberada. Aqui descreveremos suas funcionalidades, bem como seus problemas e limitações conhecidos. Por último são descritas as demandas e os problemas que foram resolvidos para liberação da versão atual.
