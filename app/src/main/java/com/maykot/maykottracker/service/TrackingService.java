@@ -38,7 +38,7 @@ import java.util.HashMap;
 public class TrackingService extends Service {
 
     private static final String TAG = "TrackingService";
-    private static final int TRACKING_INTERVAL = 5 * 1000; // Milliseconds
+    private static final int TRACKING_INTERVAL = 10 * 1000; // Milliseconds
     private static final int TRACKING_DISTANCE = 0; // Meters
 
     private SharedPreferences mSharedPreferences;
