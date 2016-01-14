@@ -1,1 +1,1 @@
-include ':app', ':radiolibrary'
+include ':radiolibrary', ':app'

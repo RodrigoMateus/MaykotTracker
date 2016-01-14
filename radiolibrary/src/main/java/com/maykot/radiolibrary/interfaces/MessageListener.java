@@ -1,7 +1,7 @@
 package com.maykot.radiolibrary.interfaces;
 
-import com.maykot.radiolibrary.ProxyRequest;
-import com.maykot.radiolibrary.ProxyResponse;
+import com.maykot.radiolibrary.model.ProxyRequest;
+import com.maykot.radiolibrary.model.ProxyResponse;
 
 import java.io.Serializable;
 

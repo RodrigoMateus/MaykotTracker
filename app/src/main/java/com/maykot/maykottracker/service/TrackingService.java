@@ -25,8 +25,8 @@ import com.maykot.maykottracker.R;
 import com.maykot.maykottracker.dao.DBManager;
 import com.maykot.maykottracker.models.Point;
 import com.maykot.radiolibrary.ContentType;
-import com.maykot.radiolibrary.ProxyRequest;
-import com.maykot.radiolibrary.ProxyResponse;
+import com.maykot.radiolibrary.model.ProxyRequest;
+import com.maykot.radiolibrary.model.ProxyResponse;
 import com.maykot.radiolibrary.Radio;
 import com.maykot.radiolibrary.interfaces.MessageListener;
 
