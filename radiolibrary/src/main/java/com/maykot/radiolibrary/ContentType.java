@@ -1,20 +1,17 @@
 package com.maykot.radiolibrary;
 
-/**
- * Created by sabatine on 16/10/15.
- */
 public enum ContentType {
 
-    IMAGE("image/png"),
+    IMAGE("image/jpg"),
     JSON("application/json");
 
     String type;
 
-    ContentType(String type){
+    ContentType(String type) {
         this.type = type;
     }
 
-    public String getType(){
+    public String getType() {
         return type;
     }
 }

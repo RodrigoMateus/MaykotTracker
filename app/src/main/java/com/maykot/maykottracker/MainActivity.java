@@ -231,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
                                 public void run() {
                                     Log.i("GET Button", "Sucess.sendGet");
                                     Toast.makeText(getApplicationContext(), "GET Button Response: \n" +
-                                            new String(response.getIdMessage()) + "\n" +
+                                            response.getIdMessage() + "\n" +
                                             new String(response.getBody()) + "\n" +
                                             "StatusCode:  " +
                                             response.getStatusCode(), Toast.LENGTH_LONG).show();
@@ -264,7 +264,7 @@ public class MainActivity extends AppCompatActivity {
                                 public void run() {
                                     Log.i("Post Button", "Sucess.sendPOst");
                                     Toast.makeText(getApplicationContext(), "Post Button Response: " +
-                                            new String(response.getIdMessage()) + "\n" +
+                                            response.getIdMessage() + "\n" +
                                             new String(response.getBody()) + "\n" +
                                             "StatusCode:  " +
                                             response.getStatusCode(), Toast.LENGTH_LONG).show();
@@ -325,7 +325,7 @@ public class MainActivity extends AppCompatActivity {
             Bitmap resizedImage = imagemResize(imageBitmap, 400);
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            resizedImage.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+            resizedImage.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
             final byte[] imagemToSend = byteArrayOutputStream.toByteArray();
 
             HashMap<String, String> header = new HashMap<>();
