@@ -325,7 +325,7 @@ public class MainActivity extends AppCompatActivity {
             Bitmap resizedImage = imagemResize(imageBitmap, 400);
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            resizedImage.compress(Bitmap.CompressFormat.JPEG, 20, byteArrayOutputStream);
+            resizedImage.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
             final byte[] imagemToSend = byteArrayOutputStream.toByteArray();
 
             HashMap<String, String> header = new HashMap<>();
