@@ -1,8 +1,8 @@
-package com.maykot.maykottracker.radio;
+package com.maykot.radiolibrary;
 
-import android.util.Log;
-
-import com.maykot.maykottracker.radio.interfaces.MessageListener;
+import com.maykot.radiolibrary.interfaces.MessageListener;
+import com.maykot.radiolibrary.model.ProxyRequest;
+import com.maykot.radiolibrary.model.ProxyResponse;
 
 import org.apache.commons.lang3.SerializationUtils;
 
@@ -11,12 +11,13 @@ import java.util.HashMap;
 
 public class HttpPostSerializer {
 
-    public static Payload dataToPost(String url, HashMap<String, String> header, byte[] body,
+    public static Payload dataToPost(String url, HashMap<String, String> header, String mqttClientId, byte[] body,
                                      MessageListener messageListener) {
         ProxyRequest proxyRequest = new ProxyRequest();
 
         proxyRequest.setUrl(url);
         proxyRequest.setHeader(header);
+        proxyRequest.setMqttClientId(mqttClientId);
         proxyRequest.setBody(body);
         proxyRequest.setIdMessage(String.valueOf(new Date().getTime()));
         proxyRequest.setVerb(Verb.POST.getVerb());

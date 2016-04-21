@@ -21,14 +21,14 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.maykot.maykottracker.radio.Command;
-import com.maykot.maykottracker.radio.ContentType;
-import com.maykot.maykottracker.radio.ProxyRequest;
-import com.maykot.maykottracker.radio.ProxyResponse;
-import com.maykot.maykottracker.radio.Radio;
-import com.maykot.maykottracker.radio.CommandSSH;
-import com.maykot.maykottracker.radio.interfaces.MessageListener;
 import com.maykot.maykottracker.service.TrackingService;
+import com.maykot.radiolibrary.Command;
+import com.maykot.radiolibrary.CommandSSH;
+import com.maykot.radiolibrary.ContentType;
+import com.maykot.radiolibrary.model.ProxyRequest;
+import com.maykot.radiolibrary.model.ProxyResponse;
+import com.maykot.radiolibrary.Radio;
+import com.maykot.radiolibrary.interfaces.MessageListener;
 
 import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
@@ -231,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
                                 public void run() {
                                     Log.i("GET Button", "Sucess.sendGet");
                                     Toast.makeText(getApplicationContext(), "GET Button Response: \n" +
-                                            new String(response.getIdMessage()) + "\n" +
+                                            response.getIdMessage() + "\n" +
                                             new String(response.getBody()) + "\n" +
                                             "StatusCode:  " +
                                             response.getStatusCode(), Toast.LENGTH_LONG).show();
@@ -264,7 +264,7 @@ public class MainActivity extends AppCompatActivity {
                                 public void run() {
                                     Log.i("Post Button", "Sucess.sendPOst");
                                     Toast.makeText(getApplicationContext(), "Post Button Response: " +
-                                            new String(response.getIdMessage()) + "\n" +
+                                            response.getIdMessage() + "\n" +
                                             new String(response.getBody()) + "\n" +
                                             "StatusCode:  " +
                                             response.getStatusCode(), Toast.LENGTH_LONG).show();
@@ -325,7 +325,7 @@ public class MainActivity extends AppCompatActivity {
             Bitmap resizedImage = imagemResize(imageBitmap, 400);
 
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            resizedImage.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+            resizedImage.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
             final byte[] imagemToSend = byteArrayOutputStream.toByteArray();
 
             HashMap<String, String> header = new HashMap<>();

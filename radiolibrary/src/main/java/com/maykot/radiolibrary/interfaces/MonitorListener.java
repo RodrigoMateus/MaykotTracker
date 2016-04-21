@@ -1,6 +1,4 @@
-package com.maykot.maykottracker.radio.interfaces;
-
-import com.maykot.maykottracker.radio.ProxyResponse;
+package com.maykot.radiolibrary.interfaces;
 
 import java.io.Serializable;
 

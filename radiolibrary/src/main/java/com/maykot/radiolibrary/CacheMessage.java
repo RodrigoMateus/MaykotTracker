@@ -1,8 +1,9 @@
-package com.maykot.maykottracker.radio;
+package com.maykot.radiolibrary;
 
 import android.util.Log;
 
-import com.maykot.maykottracker.radio.interfaces.MessageListener;
+import com.maykot.radiolibrary.interfaces.MessageListener;
+import com.maykot.radiolibrary.model.ProxyRequest;
 
 import java.util.HashMap;
 

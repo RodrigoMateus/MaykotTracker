@@ -1,8 +1,10 @@
-package com.maykot.maykottracker.radio;
+package com.maykot.radiolibrary;
 
 import android.util.Log;
 
-import com.maykot.maykottracker.radio.interfaces.MessageListener;
+import com.maykot.radiolibrary.interfaces.MessageListener;
+import com.maykot.radiolibrary.model.ProxyRequest;
+import com.maykot.radiolibrary.model.ProxyResponse;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -21,7 +23,7 @@ public class Radio implements MqttCallback, Serializable {
     public static int QoS = 2;
     public static String MQTT_CLIENT_ID = null;
     public static String SUBSCRIBED_TOPIC = null;
-    public static final String TOPIC_HTTP_POST = "maykot/http_post/";
+    public static final String REQUEST_MQTT_TOPIC = "maykot/request/";
 
     public String urlMQTT = null;
 
@@ -49,7 +51,7 @@ public class Radio implements MqttCallback, Serializable {
             MQTT_CLIENT_ID = MqttClient.generateClientId();
             Log.i("MQTT_CLIENT_ID", MQTT_CLIENT_ID);
 
-            SUBSCRIBED_TOPIC = "maykot/" + MQTT_CLIENT_ID + "/#";
+            SUBSCRIBED_TOPIC = "maykot/response/" + MQTT_CLIENT_ID + "/#";
             Log.i("SUBSCRIBED_TOPIC", SUBSCRIBED_TOPIC);
 
             mqttClient = new MqttClient(urlMQTT, MQTT_CLIENT_ID, null);
@@ -137,7 +139,7 @@ public class Radio implements MqttCallback, Serializable {
         Payload dataToSend;
 
         try {
-            dataToSend = HttpPostSerializer.dataToPost(urlCloud, header,
+            dataToSend = HttpPostSerializer.dataToPost(urlCloud, header, MQTT_CLIENT_ID,
                     data, messageListener);
         } catch (Exception e) {
             throw new Exception("Serializer Payload - " + e.getMessage());
@@ -147,7 +149,7 @@ public class Radio implements MqttCallback, Serializable {
                 MqttMessage mqttMessage = new MqttMessage();
                 mqttMessage.setQos(QoS);
                 mqttMessage.setPayload(dataToSend.messageData);
-                mqttClient.publish(TOPIC_HTTP_POST + MQTT_CLIENT_ID + "/" + dataToSend.messageId, mqttMessage);
+                mqttClient.publish(REQUEST_MQTT_TOPIC + MQTT_CLIENT_ID + "/" + dataToSend.messageId, mqttMessage);
             } catch (MqttException e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
                 throw new Exception("Publish failed with reason code = " + e.getReasonCode());
@@ -174,7 +176,7 @@ public class Radio implements MqttCallback, Serializable {
                 MqttMessage mqttMessage = new MqttMessage();
                 mqttMessage.setQos(QoS);
                 mqttMessage.setPayload(dataToSend.messageData);
-                mqttClient.publish(TOPIC_HTTP_POST + MQTT_CLIENT_ID + "/" + dataToSend.messageId, mqttMessage);
+                mqttClient.publish(REQUEST_MQTT_TOPIC + MQTT_CLIENT_ID + "/" + dataToSend.messageId, mqttMessage);
             } catch (MqttException e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
                 throw new Exception("Publish failed with reason code = " + e.getReasonCode());
