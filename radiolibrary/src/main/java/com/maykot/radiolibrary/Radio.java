@@ -23,7 +23,7 @@ public class Radio implements MqttCallback, Serializable {
     public static int QoS = 2;
     public static String MQTT_CLIENT_ID = null;
     public static String SUBSCRIBED_TOPIC = null;
-    public static final String REQUEST_MQTT_TOPIC = "maykot/request/";
+    public static final String REQUEST_MQTT_TOPIC = "maykot/get_rssi/";
 
     public String urlMQTT = null;
 
