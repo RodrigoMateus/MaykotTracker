@@ -160,31 +160,45 @@ public class TrackingService extends Service {
 
     private void publishPoint(Point point) {
         Gson gson = new Gson();
-        String pointJson = gson.toJson(point);
+        final String pointJson = gson.toJson(point);
 
         try {
             HashMap<String, String> header = new HashMap<>();
             header.put("content-type", ContentType.JSON.getType());
 
-            Radio.getInstance().sendPost(
+            Radio.getInstance(this).sendPost(
                     mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "http://localhost:8000"),
                     header, pointJson.getBytes(),
                     new MessageListener() {
 
                         @Override
                         public void result(ProxyRequest request, final ProxyResponse response) {
-                            Log.i("Tracking", "Tracking Result: " + new String(response.getBody()));
-                            Toast.makeText(getApplicationContext(), "Tracking Result: " +
-                                    new String(response.getIdMessage()) + "\n" +
-                                    new String(response.getBody()) + "\n" +
-                                    "StatusCode:  " +
-                                    response.getStatusCode(), Toast.LENGTH_LONG).show();
+                            String potencia = new String(response.getBody());
+                            Log.i("Tracking", "Tracking Result: " + potencia);
+                            notificacao(potencia);
+
                         }
                     });
         } catch (Exception e) {
             Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
             Log.i("Main.sendGetMessage", "Fail.sendPost");
         }
+    }
+
+    private void notificacao(String db) {
+        Log.i("ProxyResponse", db);
+
+        android.support.v4.app.NotificationCompat.Builder mBuilder =
+                new android.support.v4.app.NotificationCompat.Builder(this)
+                        .setSmallIcon(android.support.v7.appcompat.R.drawable.notification_template_icon_bg)
+                        .setDefaults(Notification.DEFAULT_ALL)
+                        .setContentTitle("Potencia")
+                        .setContentText(db);
+
+        NotificationManager mNotifyMgr =
+                (NotificationManager) this.getSystemService(this.NOTIFICATION_SERVICE);
+        mNotifyMgr.notify(1234567, mBuilder.build());
+
     }
 
     private void notifyPoint(final Point point) {

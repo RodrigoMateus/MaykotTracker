@@ -1,5 +1,7 @@
 package com.maykot.radiolibrary;
 
+import android.util.Log;
+
 import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
@@ -24,6 +26,8 @@ public class HttpPostSerializer {
 
 
         CacheMessage.getInstance().addMessage(proxyRequest.getIdMessage(), messageListener, proxyRequest);
+
+        Log.i("HttpPost", proxyRequest.getIdMessage());
 
         return new Payload(proxyRequest.getIdMessage(), SerializationUtils.serialize(proxyRequest));
     }

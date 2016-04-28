@@ -1,6 +1,12 @@
 package com.maykot.radiolibrary;
 
+import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.support.v7.app.NotificationCompat;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.model.ProxyRequest;
@@ -14,6 +20,7 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.io.Serializable;
+import java.util.Calendar;
 import java.util.HashMap;
 
 public class Radio implements MqttCallback, Serializable {
@@ -29,11 +36,15 @@ public class Radio implements MqttCallback, Serializable {
 
     private static Radio radio;
     private static Monitor monitor = null;
+    private static Context activity = null;
 
 
-    public static Radio getInstance() {
+    public static Radio getInstance(Context activity) {
+
         if (radio == null)
             radio = new Radio();
+
+        radio.activity = activity;
 
         return radio;
     }
@@ -65,20 +76,20 @@ public class Radio implements MqttCallback, Serializable {
         }
     }
 
-    public void startMonitor() {
-        if (monitor == null)
-            monitor = new Monitor(getInstance());
-
-        monitor.run();
-
-    }
-
-    public void stopMonitor() {
-        if (monitor != null) {
-            monitor.setActive(false);
-            monitor = null;
-        }
-    }
+//    public void startMonitor() {
+//        if (monitor == null)
+//            monitor = new Monitor(getInstance());
+//
+//        monitor.run();
+//
+//    }
+//
+//    public void stopMonitor() {
+//        if (monitor != null) {
+//            monitor.setActive(false);
+//            monitor = null;
+//        }
+//    }
 
     public static boolean mqttConnected() {
         try {
@@ -217,6 +228,7 @@ public class Radio implements MqttCallback, Serializable {
         if (topic.contains("commandResult")) {
             Log.i("commandResult", new String(mqttMessage.getPayload()));
         } else {
+            Log.i("Return TOPIC:", topic);
             returnResult(mqttMessage);
         }
     }
@@ -236,6 +248,10 @@ public class Radio implements MqttCallback, Serializable {
 
         try {
             ProxyResponse response = HttpPostSerializer.deserialize(mqttMessage.getPayload());
+            Log.i("Response RSSI", new String(response.getBody()));
+            Log.i("Response ClientId", new String(response.getMqttClientId()));
+            Log.i("Response MessageId", new String(response.getIdMessage()));
+
             MessageListener messageListener = CacheMessage.getInstance().findMessage(response.getIdMessage());
             ProxyRequest request = CacheMessage.getInstance().findRequest(response.getIdMessage());
 
@@ -245,4 +261,6 @@ public class Radio implements MqttCallback, Serializable {
             e.getMessage();
         }
     }
+
+
 }

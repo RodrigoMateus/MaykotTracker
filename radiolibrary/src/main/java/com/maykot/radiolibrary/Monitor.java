@@ -16,7 +16,6 @@ public class Monitor implements Runnable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
             radio.mqttConnected();
         }
     }

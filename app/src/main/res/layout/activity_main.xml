@@ -41,7 +41,7 @@
                     android:layout_weight="1"
                     android:background="@android:color/holo_green_dark"
                     android:padding="5dp"
-                    android:text="Conectar&#10;MQTT" />
+                    android:text="Conectar&#10;RADIO" />
 
                 <Button
                     android:id="@+id/btn_router_reset"
@@ -52,7 +52,8 @@
                     android:layout_weight="1"
                     android:background="@android:color/holo_orange_dark"
                     android:padding="5dp"
-                    android:text="Reiniciar&#10;Router" />
+                    android:text="Reiniciar&#10;Router"
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/btn_radio_reset"
@@ -64,7 +65,8 @@
                     android:layout_weight="1"
                     android:background="@android:color/holo_blue_dark"
                     android:padding="5dp"
-                    android:text="Reiniciar&#10;Radio" />
+                    android:text="Reiniciar&#10;Radio"
+                    android:visibility="gone" />
 
             </LinearLayout>
 
@@ -120,7 +122,8 @@
                     android:layout_marginRight="5dp"
                     android:layout_weight="1"
                     android:background="@android:color/holo_blue_light"
-                    android:text="Foto" />
+                    android:text="Foto"
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/btn_start_tracking"
@@ -155,7 +158,8 @@
                     android:id="@+id/edit_text_get_message"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:layout_weight="1"
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/btn_send_http_get"
@@ -168,7 +172,8 @@
                     android:background="@android:color/holo_orange_light"
                     android:paddingLeft="5dp"
                     android:paddingRight="5dp"
-                    android:text="GET" />
+                    android:text="GET"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <LinearLayout
@@ -182,7 +187,8 @@
                     android:id="@+id/edit_text_post_message"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:layout_weight="1"
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/btn_send_http_post"
@@ -195,7 +201,8 @@
                     android:background="@android:color/holo_orange_light"
                     android:paddingLeft="5dp"
                     android:paddingRight="5dp"
-                    android:text="POST" />
+                    android:text="POST"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <LinearLayout
@@ -207,7 +214,7 @@
                     android:id="@+id/txtView_mqtt_server"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="MQTT Server:"
+                    android:text="Endereço do RADIO:"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
             </LinearLayout>
@@ -244,7 +251,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Servidor de Aplicação:"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
+                    android:textAppearance="?android:attr/textAppearanceMedium"
+                    android:visibility="gone" />
 
             </LinearLayout>
 
@@ -260,15 +268,36 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="Ex:http://192.168.0.1:8000"
-                    android:text="http://localhost:8000" />
+                    android:text="http://localhost:8000"
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/btn_save_url_application_server"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Salvar" />
+                    android:text="Salvar"
+                    android:visibility="gone" />
 
             </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <Button
+                    android:id="@+id/btn_get_radio_power_rating"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/holo_orange_light"
+                    android:paddingLeft="20dp"
+                    android:paddingRight="20dp"
+                    android:text="TESTE POTENCIA" />
+
+            </LinearLayout>
+
         </LinearLayout>
     </ScrollView>
 </LinearLayout>
