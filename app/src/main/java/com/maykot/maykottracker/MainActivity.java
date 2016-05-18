@@ -1,17 +1,16 @@
 package com.maykot.maykottracker;
 
+import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -21,12 +20,15 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationAvailability;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 import com.google.gson.Gson;
+import com.maykot.maykottracker.helper.Notifcation;
+import com.maykot.maykottracker.helper.SendMessage;
 import com.maykot.maykottracker.models.Point;
-import com.maykot.maykottracker.service.TrackingService;
-import com.maykot.radiolibrary.Command;
-import com.maykot.radiolibrary.CommandSSH;
 import com.maykot.radiolibrary.ContentType;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
@@ -34,12 +36,15 @@ import com.maykot.radiolibrary.Radio;
 import com.maykot.radiolibrary.interfaces.MessageListener;
 
 import java.io.ByteArrayOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
 
     private static final String TAG = "MainActivity";
-    static final int REQUEST_IMAGE_CAPTURE = 1;
+
     private NetworkInfo networkInfo;
 
     /* SharedPreferences file */
@@ -47,26 +52,21 @@ public class MainActivity extends AppCompatActivity {
     public static final String DEFAULT_SHARED_PREFERENCES = "maykot";
     public static final String NOTIFY_LOCATION = "notify_location";
     public static final String URL_BROKER = "url_broker";
-    public static final String URL_APP_SERVER = "url_app_server";
 
     /*  VIEW */
     private Button mMqttConnectButton;
-    private Button mRouterResetButton;
-    private Button mRadioResetButton;
     private CheckBox mNotifyPositionsCheckBox;
     private TextView mStatusConexaoTextView;
-    private Button mTakePictureButton;
     private Button mStartTrackingButton;
     private Button mStopTrackingButton;
-    private EditText mHttpGetEditText;
-    private Button mHttpGetSendButton;
-    private EditText mHttpPostEditText;
-    private Button mHttpPostSendButton;
     private EditText mMqttUrlEditText;
     private Button mMqttUrlSaveButton;
-    private EditText mApplicationServerUrlEditText;
-    private Button mApplicationServerUrlSaveButton;
     private Button mGetRadioPowerRating;
+
+    private GoogleApiClient mGoogleApiClient;
+    private LocationRequest mLocationRequest;
+    private Location mLastLocation;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,44 +83,7 @@ public class MainActivity extends AppCompatActivity {
         mMqttConnectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    if (Radio.getInstance(MainActivity.this).mqttConnect(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"))) {
-                        mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
-                        mMqttConnectButton.setText("RADIO\nOK!");
-                    }
-
-                } catch (Exception e) {
-                    e.getMessage();
-                }
-            }
-        });
-
-        mRouterResetButton = (Button) findViewById(R.id.btn_router_reset);
-        mRouterResetButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    String sshResult = new CommandSSH().execute("sudo ./radiostart.sh stop\n" +
-                            "sudo ./radiostart.sh start").get();
-                    Toast.makeText(getApplicationContext(), sshResult, Toast.LENGTH_LONG).show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        mRadioResetButton = (Button) findViewById(R.id.btn_radio_reset);
-        mRadioResetButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    if (Radio.getInstance(MainActivity.this).sendCommand(Command.RESET.getCommand())) {
-                        Toast.makeText(getApplicationContext(), "Radio RESET OK!", Toast.LENGTH_LONG).show();
-                    }
-                } catch (Exception e) {
-                    Toast.makeText(getApplicationContext(), "Radio RESET Falhou!!", Toast.LENGTH_LONG).show();
-                    e.printStackTrace();
-                }
+                connectMqtt();
             }
         });
 
@@ -135,14 +98,6 @@ public class MainActivity extends AppCompatActivity {
 
         mStatusConexaoTextView = (TextView) findViewById(R.id.txtView_connection_status);
         checkStatusConnection(mStatusConexaoTextView);
-
-        mTakePictureButton = (Button) findViewById(R.id.btn_take_picture);
-        mTakePictureButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dispatchTakePictureIntent();
-            }
-        });
 
         mStartTrackingButton = (Button) findViewById(R.id.btn_start_tracking);
         mStartTrackingButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
@@ -174,28 +129,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mHttpGetEditText = (EditText) findViewById(R.id.edit_text_get_message);
-
-        mHttpGetSendButton = (Button) findViewById(R.id.btn_send_http_get);
-        mHttpGetSendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String urlToGet = "http://localhost:8000";
-                sendGetMessage(urlToGet);
-            }
-        });
-
-        mHttpPostEditText = (EditText) findViewById(R.id.edit_text_post_message);
-
-        mHttpPostSendButton = (Button) findViewById(R.id.btn_send_http_post);
-        mHttpPostSendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String urlToGet = "http://localhost:8000";
-                sendPostMessage(urlToGet);
-            }
-        });
-
         mMqttUrlEditText = (EditText) findViewById(R.id.edit_text_url_broker);
         mMqttUrlEditText.setText(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"));
 
@@ -207,141 +140,83 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mApplicationServerUrlEditText = (EditText) findViewById(R.id.edit_text_url_application_server);
-        mApplicationServerUrlEditText.setText(mSharedPreferences.getString(URL_APP_SERVER, "http://localhost:8000"));
-
-        mApplicationServerUrlSaveButton = (Button) findViewById(R.id.btn_save_url_application_server);
-        mApplicationServerUrlSaveButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                saveUrlAppServer();
-            }
-        });
-
         mGetRadioPowerRating = (Button) findViewById(R.id.btn_get_radio_power_rating);
         mGetRadioPowerRating.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String urlToGet = "http://localhost:8000";
-                getPowerRating();
+                powerRating();
             }
         });
 
+        buildGoogleApiClient();
     }
 
-    private void getPowerRating() {
+    private void connectMqtt() {
+        MqttTask mqttTask = new MqttTask();
+        mqttTask.execute();
+    }
 
-        Point point = new Point();
-        point.setLatitude(0);
-        point.setLongitude(0);
-        point.setAccuracy(0);
-        point.setSpeed(0);
-
-        Gson gson = new Gson();
-        String pointJson = gson.toJson(point);
-
-        try {
-            HashMap<String, String> header = new HashMap<>();
-            header.put("content-type", ContentType.JSON.getType());
-
-            Radio.getInstance(this).sendPost(
-                    mSharedPreferences.getString(MainActivity.URL_APP_SERVER, "http://localhost:8000"),
-                    header, pointJson.getBytes(),
-                    new MessageListener() {
-
-                        @Override
-                        public void result(ProxyRequest request, final ProxyResponse response) {
-                            sendNotification(new String(response.getBody()));
-                        }
-                    });
-        } catch (Exception e) {
-            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
-            Log.i("Main.sendGetMessage", "Fail.sendPost");
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.i("On Resume", "On Resume");
+        checkStatusConnection(mStatusConexaoTextView);
+        if (Radio.mqttConnected()) {
+            mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+            mMqttConnectButton.setText("RADIO\nOK!");
+        } else {
+            mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
+            mMqttConnectButton.setText("Conectar\nRADIO");
         }
     }
 
-    public void sendNotification(String potencia){
-        Log.i("Teste", "Potencia: -" + potencia +"db");
-        mGetRadioPowerRating.setText("Potencia: -"+ potencia +"db");
+    @Override
+    public void onConnected(Bundle bundle) {
+        mLocationRequest = LocationRequest.create();
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setInterval(10 * 1000);
+
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
+                mGoogleApiClient);
     }
 
-    /**
-     * Envia uma mensagem por get pelo mqtt para o radio
-     *
-     * @param urlToGet
-     */
-    private void sendGetMessage(String urlToGet) {
-        try {
-            HashMap<String, String> header = new HashMap<>();
-            header.put("content-type", ContentType.JSON.getType());
-
-            Radio.getInstance(MainActivity.this).sendGet(urlToGet, header,
-                    new MessageListener() {
-
-                        @Override
-                        public void result(ProxyRequest request, final ProxyResponse response) {
-                            MainActivity.this.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Log.i("GET Button", new String(response.getBody()));
-                                    Toast.makeText(getApplicationContext(), "GET Button Response: \n" +
-                                            response.getIdMessage() + "\n" +
-                                            new String(response.getBody()) + "\n" +
-                                            "StatusCode:  " +
-                                            response.getStatusCode(), Toast.LENGTH_LONG).show();
-                                }
-                            });
-                        }
-                    });
-        } catch (Exception e) {
-            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
-            Log.i("Main.sendGetMessage", "Fail.sendGet");
+    synchronized void buildGoogleApiClient() {
+        if(mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
         }
     }
 
-    private void sendPostMessage(String urlToGet) {
-        try {
-            HashMap<String, String> header = new HashMap<>();
-            header.put("content-type", ContentType.JSON.getType());
+    @Override
+    public void onConnectionSuspended(int i) {}
 
-            String text = mHttpPostEditText.getText().toString();
-            if (text.isEmpty())
-                text = "vazio";
-
-            Radio.getInstance(MainActivity.this).sendPost(urlToGet, header, text.getBytes(),
-                    new MessageListener() {
-
-                        @Override
-                        public void result(final ProxyRequest request, final ProxyResponse response) {
-                            MainActivity.this.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Log.i("Post Button", "Sucess.sendPOst");
-                                    Toast.makeText(getApplicationContext(), "Post Button Response: " +
-                                            response.getIdMessage() + "\n" +
-                                            new String(response.getBody()) + "\n" +
-                                            "StatusCode:  " +
-                                            response.getStatusCode(), Toast.LENGTH_LONG).show();
-                                }
-                            });
-                        }
-                    });
-        } catch (Exception e) {
-            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
-            Log.i("Main.sendGetMessage", "Fail.sendGet");
-        }
+    @Override
+    public void onLocationChanged(Location location) {
+        mLastLocation = location;
+        updateLocationPoint(location);
     }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {}
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mGoogleApiClient.disconnect();
+    }
+
 
     private void startTracking() {
-        Log.i(TAG, "Starting tracking");
-        Intent intent = new Intent(MainActivity.this, TrackingService.class);
-        startService(intent);
+        mGoogleApiClient.connect();
     }
 
     private void stopTracking() {
-        Log.i(TAG, "Stopping tracking");
-        Intent intent = new Intent(this, TrackingService.class);
-        stopService(intent);
+        mGoogleApiClient.disconnect();
     }
 
     private void saveNotifyPositions() {
@@ -354,55 +229,6 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = mSharedPreferences.edit();
         editor.putString(URL_BROKER, mMqttUrlEditText.getText().toString());
         editor.apply();
-    }
-
-    private void saveUrlAppServer() {
-        SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putString(URL_APP_SERVER, mApplicationServerUrlEditText.getText().toString());
-        editor.apply();
-    }
-
-    private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
-            Bitmap resizedImage = imagemResize(imageBitmap, 400);
-
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            resizedImage.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
-            final byte[] imagemToSend = byteArrayOutputStream.toByteArray();
-
-            HashMap<String, String> header = new HashMap<>();
-            header.put("content-type", ContentType.IMAGE.getType());
-
-            try {
-                Radio.getInstance(MainActivity.this).sendPost("http://localhost:8000", header, imagemToSend,
-                        new MessageListener() {
-
-                            @Override
-                            public void result(ProxyRequest request, final ProxyResponse response) {
-                                MainActivity.this.runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Log.i("FOTO Button", "Sucess.sendPost");
-                                        Toast.makeText(getApplicationContext(), "POST Response: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
-                                    }
-                                });
-                            }
-                        });
-            } catch (Exception e) {
-                Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
-            }
-        }
     }
 
     public int checkTypeConnection(Context context) {
@@ -427,42 +253,6 @@ public class MainActivity extends AppCompatActivity {
         return connected;
     }
 
-    public static Bitmap imagemResize(Bitmap myBitmap, int maxSize) {
-        int outWidth;
-        int outHeight;
-        int inWidth = myBitmap.getWidth();
-        int inHeight = myBitmap.getHeight();
-        if (inWidth > inHeight) {
-            outWidth = maxSize;
-            outHeight = (inHeight * maxSize) / inWidth;
-        } else {
-            outHeight = maxSize;
-            outWidth = (inWidth * maxSize) / inHeight;
-        }
-        return Bitmap.createScaledBitmap(myBitmap, outWidth, outHeight, false);
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
     public void checkStatusConnection(TextView mStatusConexaoTextView) {
         int connected = checkTypeConnection(this);
         if (connected == 0) {
@@ -485,17 +275,179 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.i("On Resume", "On Resume");
-        checkStatusConnection(mStatusConexaoTextView);
-        if (Radio.mqttConnected()) {
-            mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
-            mMqttConnectButton.setText("RADIO\nOK!");
-        } else {
-            mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
-            mMqttConnectButton.setText("Conectar\nRADIO");
+    public class PowerRatingTask extends AsyncTask<String,Void, Boolean> {
+
+        ProgressDialog progDailog;
+        String error;
+        boolean progDailogStatus = true;
+
+        public PowerRatingTask(){}
+
+        public PowerRatingTask(boolean progDailogStatus){
+            this.progDailogStatus = progDailogStatus;
         }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            progDailog = new ProgressDialog(MainActivity.this);
+            progDailog.setMessage("Procurando...");
+            progDailog.setIndeterminate(false);
+            progDailog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            progDailog.setCancelable(true);
+
+            if(progDailogStatus)
+                progDailog.show();
+        }
+
+        @Override
+        protected Boolean doInBackground(final String... params) {
+            Log.i("Power Rating Task", "json -" + params[0]);
+
+            try {
+                HashMap<String, String> header = new HashMap<>();
+                header.put("content-type", ContentType.JSON.getType());
+
+                Radio.getInstance(getApplicationContext()).sendPost(
+                        "http://localhost:8000",
+                        header, params[0].getBytes(),
+                        new MessageListener() {
+
+                            @Override
+                            public void result(ProxyRequest request, final ProxyResponse response) {
+                                resultExecute(true, new String(response.getBody()));
+                            }
+                        });
+            } catch (Exception e) {
+                error = e.getMessage();
+                return false;
+            }
+            return true;
+        }
+
+        protected void resultExecute(Boolean result, String message) {
+            progDailog.dismiss();
+            if(result) {
+                Log.i("Teste", "Potencia: -" + message +"db");
+                mGetRadioPowerRating.setText("Potencia: -"+ message +"db");
+
+            }else{
+             }
+        }
+
+        protected void onPostExecute(Boolean result) {
+            if(!result) {
+                Toast.makeText(getApplicationContext(), error, Toast.LENGTH_LONG).show();
+                Log.i("Main.sendGetMessage", "Fail.sendPost");
+                progDailog.dismiss();
+            }
+        }
+    }
+
+    public class MqttTask extends AsyncTask<Void,Void, Boolean> {
+
+        ProgressDialog progDailog;
+        String error;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            progDailog = new ProgressDialog(MainActivity.this);
+            progDailog.setMessage("Loading...");
+            progDailog.setIndeterminate(false);
+            progDailog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            progDailog.setCancelable(true);
+            progDailog.show();
+        }
+
+        @Override
+        protected Boolean doInBackground(Void... params) {
+            try {
+                if (Radio.getInstance(MainActivity.this).mqttConnect(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"))) {
+                    return true;
+                }else{
+                    return false;
+                }
+            } catch (Exception e) {
+                return false;
+            }
+
+        }
+
+        protected void onPostExecute(Boolean result) {
+            if(result) {
+                mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+                mMqttConnectButton.setText("RADIO\nOK!");
+            }else{
+                mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
+                mMqttConnectButton.setText("RADIO\nFail!");
+
+            }
+            progDailog.dismiss();
+        }
+
+    }
+
+    public void updateLocationPoint(Location location){
+        Point point = new Point();
+        point.savePoint(this,location);
+
+        PowerRatingTask powerRatingTask = new PowerRatingTask(false);
+        powerRatingTask.execute(point.objToJson());
+
+        Notifcation.notifyPoint(this, point, mSharedPreferences);
+
+        Log.i(TAG, point.toString());
+    }
+
+    private void powerRating() {
+
+        Point point = new Point();
+
+        if(mLastLocation != null) {
+            point.setLatitude(mLastLocation.getLatitude());
+            point.setLongitude(mLastLocation.getLongitude());
+            point.setAccuracy((int) mLastLocation.getAccuracy());
+            point.setSpeed(msToKmh(mLastLocation.getSpeed()));
+        }
+
+        PowerRatingTask powerRatingTask = new PowerRatingTask();
+        powerRatingTask.execute(point.objToJson());
+
+    }
+
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+
+    /**
+     * Converte a velocidade de metros/segundo para kilometros/hora
+     */
+    private int msToKmh(float speed) {
+        return Math.round(3.6f * speed);
+    }
+
+    private String formatDate(Date date) {
+        return new SimpleDateFormat("HH:mm:ss").format(date);
     }
 }

@@ -1,9 +1,16 @@
 package com.maykot.maykottracker.models;
 
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.location.Location;
+import android.util.Log;
 
+import com.maykot.maykottracker.dao.DBManager;
 import com.maykot.maykottracker.dao.PointDAO;
 
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -11,10 +18,10 @@ public class Point {
 
     private Date createdAt;
     private boolean uploaded;
-    private double latitude;
-    private double longitude;
-    private int accuracy;
-    private int speed;
+    private double latitude = 0.0;
+    private double longitude = 0.0;
+    private int accuracy = 0;
+    private int speed = 0;
     private String msg;
 
     public Point() {
@@ -93,4 +100,41 @@ public class Point {
                 "; msg=;" + msg +
                 ";}";
     }
+
+    public void savePoint(Context context, Location location) {
+        setLatitude(location.getLatitude());
+        setLongitude(location.getLongitude());
+        setAccuracy((int) location.getAccuracy());
+        setSpeed(msToKmh(location.getSpeed()));
+        setCreatedAt(new Date());
+
+        SQLiteDatabase db = DBManager.getInstance(context).getWritableDatabase();
+        save(db);
+        db.close();
+    }
+
+    private int msToKmh(float speed) {
+        return Math.round(3.6f * speed);
+    }
+
+    private String formatDate(Date date) {
+        return new SimpleDateFormat("HH:mm:ss").format(date);
+    }
+
+    public String objToJson(){
+        JSONObject jsonObject = new JSONObject();
+
+        try {
+            jsonObject.put("date", createdAt.getTime());
+            jsonObject.put("latitude", latitude);
+            jsonObject.put("longitude", longitude);
+            jsonObject.put("accuracy", accuracy);
+            jsonObject.put("speed", speed);
+            jsonObject.put("msg", msg);
+        }catch (Exception e){
+            Log.i("objToJson",e.getMessage());
+        }
+        return jsonObject.toString();
+    }
+
 }

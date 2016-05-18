@@ -143,7 +143,7 @@ public class Radio implements MqttCallback, Serializable {
     public void sendPost(String urlCloud, HashMap<String, String> header, byte[] data, MessageListener messageListener)
             throws Exception {
 
-        if (!mqttClient.isConnected()) {
+        if (!mqttConnected()) {
             throw new Exception("Client MQTT not conntect");
         }
 
