@@ -2,7 +2,8 @@ package com.maykot.radiolibrary;
 
 public enum Verb {
     GET("get"),
-    POST("post");
+    POST("post"),
+    CHECK("check");
 
     String verb;
 

@@ -144,7 +144,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mGetRadioPowerRating.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                powerRating();
+
+                //powerRating();
+                checkRadioConnection();
             }
         });
 
@@ -341,6 +343,27 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 Log.i("Main.sendGetMessage", "Fail.sendPost");
                 progDailog.dismiss();
             }
+        }
+    }
+
+    public void checkRadioConnection() {
+        try {
+            Radio.getInstance(getApplicationContext()).sendCheckRadio(new MessageListener() {
+                @Override
+                public void result(ProxyRequest request, final ProxyResponse response) {
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+                public void fail() {
+                }
+            });
+        } catch (Exception e) {
+            //falha no mqtt
+            Toast.makeText(getApplicationContext(), "Mensagem Fail: ", Toast.LENGTH_LONG).show();
         }
     }
 

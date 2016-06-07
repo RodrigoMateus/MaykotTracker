@@ -32,6 +32,19 @@ public class HttpPostSerializer {
         return new Payload(proxyRequest.getIdMessage(), SerializationUtils.serialize(proxyRequest));
     }
 
+    public static Payload dataToCheck(String contentType, byte[] body, MessageListener messageListener)
+
+    {
+        ProxyRequest proxyRequest = new ProxyRequest();
+        proxyRequest.setBody(body);
+        proxyRequest.setIdMessage(String.valueOf(new Date().getTime()));
+        proxyRequest.setVerb(Verb.CHECK.getVerb());
+
+        CacheMessage.getInstance().addMessage(proxyRequest.getIdMessage(), messageListener, proxyRequest);
+
+        return new Payload(proxyRequest.getIdMessage(),SerializationUtils.serialize(proxyRequest));
+    }
+
     public static Payload dataToGet(String url, HashMap<String, String> header, MessageListener messageListener) {
         ProxyRequest proxyRequest = new ProxyRequest();
         proxyRequest.setUrl(url);

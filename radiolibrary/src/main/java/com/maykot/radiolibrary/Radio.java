@@ -18,6 +18,7 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.json.JSONObject;
 
 import java.io.Serializable;
 import java.util.Calendar;
@@ -32,6 +33,7 @@ public class Radio implements MqttCallback, Serializable {
     public static String SUBSCRIBED_TOPIC = null;
     //    public static final String REQUEST_MQTT_TOPIC = "maykot/get_rssi/";
     public static final String REQUEST_MQTT_TOPIC = "maykot/request/";
+    public static final String TOPIC_HTTP_CHECK = "maykot/check/";
 
     public String urlMQTT = null;
 
@@ -169,6 +171,37 @@ public class Radio implements MqttCallback, Serializable {
         }
     }
 
+    public void sendCheckRadio(MessageListener messageListener)
+            throws Exception{
+
+        if(!mqttClient.isConnected()){
+            throw new Exception("Client MQTT not conntect");
+        }
+
+        Payload dataToCheck = null;
+
+        try {
+            dataToCheck = HttpPostSerializer.dataToCheck(ContentType.JSON.type, "".getBytes(), messageListener);
+        }catch (Exception e){
+            throw new Exception("Serializer Payload - "+ e.getMessage());
+        }
+        if (mqttClient.isConnected()) {
+            try {
+                MqttMessage mqttMessage = new MqttMessage();
+                mqttMessage.setQos(QoS);
+                mqttMessage.setPayload(dataToCheck.messageData);
+                mqttClient.publish(TOPIC_HTTP_CHECK+ MQTT_CLIENT_ID+"/" +dataToCheck.messageId, mqttMessage);
+            } catch (MqttException e) {
+                Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
+                throw new Exception("Publish failed with reason code = " + e.getReasonCode());
+            }catch (Exception e){
+                Log.d(getClass().getCanonicalName(), "Publish failed with reason code = ");
+                throw new Exception("Publish failed with reason code = ");
+
+            }
+        }
+    }
+
     public void sendGet(String urlCloud, HashMap<String, String> header, MessageListener messageListener)
             throws Exception {
 
@@ -249,18 +282,52 @@ public class Radio implements MqttCallback, Serializable {
 
         try {
             ProxyResponse response = HttpPostSerializer.deserialize(mqttMessage.getPayload());
-            Log.i("Response RSSI", new String(response.getBody()));
             Log.i("Response ClientId", new String(response.getMqttClientId()));
             Log.i("Response MessageId", new String(response.getIdMessage()));
 
             MessageListener messageListener = CacheMessage.getInstance().findMessage(response.getIdMessage());
             ProxyRequest request = CacheMessage.getInstance().findRequest(response.getIdMessage());
 
+            if(response.getVerb().contains("check")){
+                checkMessageResult(response);
+            }
+
             messageListener.result(request, response);
 
         } catch (Exception e) {
             e.getMessage();
         }
+    }
+
+    private void checkMessageResult(ProxyResponse response){
+
+        String body = new String(response.getBody());
+
+        JSONObject jsonObject = null;
+
+        try {
+            jsonObject = new JSONObject(body);
+
+            if(jsonObject.has("rssi")){
+                jsonObject.put("proxy", "ok");
+                jsonObject.put("radio_local", "ok");
+            }else if(jsonObject.has("error")){
+                if(response.getStatusCode() == 608){  //falha radio local
+                    jsonObject.put("rssi", "-");
+                    jsonObject.put("proxy", "-");
+                    jsonObject.put("radio_local", "fail");
+                }else if(response.getStatusCode() == 603){ //falha na trasmissao para proxy
+                    jsonObject.put("rssi", "-");
+                    jsonObject.put("proxy", "fail");
+                    jsonObject.put("radio_local", "ok");
+                }
+            }
+        }catch (Exception e){
+            e.getMessage();
+            jsonObject = new JSONObject();
+        }
+
+        response.setBody(jsonObject.toString().getBytes());
     }
 
 
