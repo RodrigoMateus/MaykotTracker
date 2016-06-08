@@ -1,13 +1,10 @@
 package com.maykot.radiolibrary;
 
 import android.util.Log;
-
 import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
-
 import org.apache.commons.lang3.SerializationUtils;
-
 import java.util.Date;
 import java.util.HashMap;
 

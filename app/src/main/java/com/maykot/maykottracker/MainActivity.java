@@ -20,22 +20,19 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.gson.Gson;
 import com.maykot.maykottracker.helper.Notifcation;
-import com.maykot.maykottracker.helper.SendMessage;
 import com.maykot.maykottracker.models.Point;
 import com.maykot.radiolibrary.ContentType;
-import com.maykot.radiolibrary.model.ProxyRequest;
-import com.maykot.radiolibrary.model.ProxyResponse;
 import com.maykot.radiolibrary.Radio;
 import com.maykot.radiolibrary.interfaces.MessageListener;
+import com.maykot.radiolibrary.model.ProxyRequest;
+import com.maykot.radiolibrary.model.ProxyResponse;
 
-import java.io.ByteArrayOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -61,7 +58,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private Button mStopTrackingButton;
     private EditText mMqttUrlEditText;
     private Button mMqttUrlSaveButton;
-    private Button mGetRadioPowerRating;
+    private Button mGetRadioPowerRatingButton;
+    private Button mCheckRadioConnectionButton;
 
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
@@ -140,12 +138,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         });
 
-        mGetRadioPowerRating = (Button) findViewById(R.id.btn_get_radio_power_rating);
-        mGetRadioPowerRating.setOnClickListener(new View.OnClickListener() {
+        mGetRadioPowerRatingButton = (Button) findViewById(R.id.btn_get_radio_power_rating);
+        mGetRadioPowerRatingButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                powerRating();
+            }
+        });
 
-                //powerRating();
+        mCheckRadioConnectionButton = (Button) findViewById(R.id.btn_check_radio_connection);
+        mCheckRadioConnectionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
                 checkRadioConnection();
             }
         });
@@ -185,7 +189,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     synchronized void buildGoogleApiClient() {
-        if(mGoogleApiClient == null) {
+        if (mGoogleApiClient == null) {
             mGoogleApiClient = new GoogleApiClient.Builder(this)
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
@@ -195,7 +199,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     @Override
-    public void onConnectionSuspended(int i) {}
+    public void onConnectionSuspended(int i) {
+    }
 
     @Override
     public void onLocationChanged(Location location) {
@@ -204,7 +209,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {}
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+    }
 
     @Override
     protected void onDestroy() {
@@ -277,15 +283,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    public class PowerRatingTask extends AsyncTask<String,Void, Boolean> {
+    public class PowerRatingTask extends AsyncTask<String, Void, Boolean> {
 
         ProgressDialog progDailog;
         String error;
         boolean progDailogStatus = true;
 
-        public PowerRatingTask(){}
+        public PowerRatingTask() {
+        }
 
-        public PowerRatingTask(boolean progDailogStatus){
+        public PowerRatingTask(boolean progDailogStatus) {
             this.progDailogStatus = progDailogStatus;
         }
 
@@ -298,7 +305,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             progDailog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
             progDailog.setCancelable(true);
 
-            if(progDailogStatus)
+            if (progDailogStatus)
                 progDailog.show();
         }
 
@@ -311,7 +318,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 header.put("content-type", ContentType.JSON.getType());
 
                 Radio.getInstance(getApplicationContext()).sendPost(
-                        "http://localhost:8000",
+                        "http://107.170.47.53:9200/teste/point",
                         header, params[0].getBytes(),
                         new MessageListener() {
 
@@ -329,16 +336,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         protected void resultExecute(Boolean result, String message) {
             progDailog.dismiss();
-            if(result) {
-                Log.i("Teste", "Potencia: -" + message +"db");
-                mGetRadioPowerRating.setText("Potencia: -"+ message +"db");
+            if (result) {
+                Log.i("Teste", "Potencia: -" + message + "db");
+                mGetRadioPowerRatingButton.setText("Potencia: -" + message + "db");
 
-            }else{
-             }
+            } else {
+            }
         }
 
         protected void onPostExecute(Boolean result) {
-            if(!result) {
+            if (!result) {
                 Toast.makeText(getApplicationContext(), error, Toast.LENGTH_LONG).show();
                 Log.i("Main.sendGetMessage", "Fail.sendPost");
                 progDailog.dismiss();
@@ -358,6 +365,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         }
                     });
                 }
+
                 public void fail() {
                 }
             });
@@ -367,7 +375,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    public class MqttTask extends AsyncTask<Void,Void, Boolean> {
+    public class MqttTask extends AsyncTask<Void, Void, Boolean> {
 
         ProgressDialog progDailog;
         String error;
@@ -388,7 +396,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             try {
                 if (Radio.getInstance(MainActivity.this).mqttConnect(mSharedPreferences.getString(URL_BROKER, "tcp://192.168.42.1:1883"))) {
                     return true;
-                }else{
+                } else {
                     return false;
                 }
             } catch (Exception e) {
@@ -398,10 +406,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
 
         protected void onPostExecute(Boolean result) {
-            if(result) {
+            if (result) {
                 mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
                 mMqttConnectButton.setText("RADIO\nOK!");
-            }else{
+            } else {
                 mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
                 mMqttConnectButton.setText("RADIO\nFail!");
 
@@ -411,9 +419,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     }
 
-    public void updateLocationPoint(Location location){
+    public void updateLocationPoint(Location location) {
         Point point = new Point();
-        point.savePoint(this,location);
+        point.savePoint(this, location);
 
         PowerRatingTask powerRatingTask = new PowerRatingTask(false);
         powerRatingTask.execute(point.objToJson());
@@ -427,7 +435,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         Point point = new Point();
 
-        if(mLastLocation != null) {
+        if (mLastLocation != null) {
             point.setLatitude(mLastLocation.getLatitude());
             point.setLongitude(mLastLocation.getLongitude());
             point.setAccuracy((int) mLastLocation.getAccuracy());
@@ -438,7 +446,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         powerRatingTask.execute(point.objToJson());
 
     }
-
 
 
     @Override
