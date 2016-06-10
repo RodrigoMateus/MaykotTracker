@@ -1,0 +1,24 @@
+{
+  "mappings": {
+    "sinal": {
+      "_all": {
+        "enabled": true
+      },
+      "properties": {
+        "id": {
+          "type": "long",
+          "index": "no"
+        },
+        "location ": {
+          "type": "geo_point"
+        },
+        "date": {
+          "type": "date"
+        },
+        "rssi": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

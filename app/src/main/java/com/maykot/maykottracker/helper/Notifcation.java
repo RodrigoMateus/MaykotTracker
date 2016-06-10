@@ -9,7 +9,7 @@ import android.util.Log;
 
 import com.maykot.maykottracker.MainActivity;
 import com.maykot.maykottracker.R;
-import com.maykot.maykottracker.models.Point;
+import com.maykot.maykottracker.models.Sinal;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -36,7 +36,7 @@ public class Notifcation {
 
     }
 
-    public static void notifyPoint(Activity activity, final Point point, SharedPreferences mSharedPreferences) {
+    public static void notifyPoint(Activity activity, final Sinal sinal, SharedPreferences mSharedPreferences) {
 
         if (mSharedPreferences.getBoolean(MainActivity.NOTIFY_LOCATION, false)) {
             NotificationCompat.Builder mBuilder =
@@ -45,9 +45,8 @@ public class Notifcation {
                             .setWhen(Calendar.getInstance().getTimeInMillis())
                             .setDefaults(Notification.DEFAULT_ALL)
                             .setContentText(
-                                    "Speed: " + point.getSpeed() +
-                                            ", Acc: " + point.getAccuracy() +
-                                            ", Time: " + formatDate(point.getCreatedAt()));
+                                    "Lat: " + sinal.getLocation().getLat() +
+                                            ", Lon: " + sinal.getLocation().getLon());
 
             NotificationManager mNotifyMgr =
                     (NotificationManager) activity.getSystemService(activity.NOTIFICATION_SERVICE);

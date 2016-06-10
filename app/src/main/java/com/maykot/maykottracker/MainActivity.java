@@ -3,6 +3,7 @@ package com.maykot.maykottracker;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.location.Location;
@@ -25,13 +26,18 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.maykot.maykottracker.dao.DataBaseOpenHelper;
 import com.maykot.maykottracker.helper.Notifcation;
-import com.maykot.maykottracker.models.Point;
+import com.maykot.maykottracker.models.Sinal;
+import com.maykot.maykottracker.rest.SinalRest;
 import com.maykot.radiolibrary.ContentType;
 import com.maykot.radiolibrary.Radio;
 import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -40,26 +46,24 @@ import java.util.HashMap;
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
 
-    private static final String TAG = "MainActivity";
-
-    private NetworkInfo networkInfo;
-
-    /* SharedPreferences file */
-    private SharedPreferences mSharedPreferences;
     public static final String DEFAULT_SHARED_PREFERENCES = "maykot";
     public static final String NOTIFY_LOCATION = "notify_location";
     public static final String URL_BROKER = "url_broker";
-
+    private static final String TAG = "MainActivity";
+    private NetworkInfo networkInfo;
+    /* SharedPreferences file */
+    private SharedPreferences mSharedPreferences;
     /*  VIEW */
-    private Button mMqttConnectButton;
-    private CheckBox mNotifyPositionsCheckBox;
-    private TextView mStatusConexaoTextView;
-    private Button mStartTrackingButton;
-    private Button mStopTrackingButton;
     private EditText mMqttUrlEditText;
     private Button mMqttUrlSaveButton;
-    private Button mGetRadioPowerRatingButton;
-    private Button mCheckRadioConnectionButton;
+    private Button mMqttConnectButton;
+    private TextView mStatusConexaoTextView;
+    private TextView mStatusRadioLocalTextView;
+    private TextView mStatusProxyTextView;
+    private TextView mRssiTextView;
+    private Button mStartTrackingButton;
+    private Button mStopTrackingButton;
+    private CheckBox mNotifyPositionsCheckBox;
 
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
@@ -81,7 +85,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mMqttConnectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                connectMqtt();
+                if (!Radio.mqttConnected()) {
+                    connectMqtt();
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                checkRadioConnection();
             }
         });
 
@@ -96,6 +108,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         mStatusConexaoTextView = (TextView) findViewById(R.id.txtView_connection_status);
         checkStatusConnection(mStatusConexaoTextView);
+
+        mStatusRadioLocalTextView = (TextView) findViewById(R.id.txtView_local_radio_status);
+        mStatusProxyTextView = (TextView) findViewById(R.id.txtView_proxy_status);
+        mRssiTextView = (TextView) findViewById(R.id.txtView_rssi_status);
 
         mStartTrackingButton = (Button) findViewById(R.id.btn_start_tracking);
         mStartTrackingButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
@@ -138,21 +154,21 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         });
 
-        mGetRadioPowerRatingButton = (Button) findViewById(R.id.btn_get_radio_power_rating);
-        mGetRadioPowerRatingButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                powerRating();
-            }
-        });
-
-        mCheckRadioConnectionButton = (Button) findViewById(R.id.btn_check_radio_connection);
-        mCheckRadioConnectionButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                checkRadioConnection();
-            }
-        });
+//        mGetRadioPowerRatingButton = (Button) findViewById(R.id.btn_get_radio_power_rating);
+//        mGetRadioPowerRatingButton.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                powerRating();
+//            }
+//        });
+//
+//        mCheckRadioConnectionButton = (Button) findViewById(R.id.btn_check_radio_connection);
+//        mCheckRadioConnectionButton.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                checkRadioConnection();
+//            }
+//        });
 
         buildGoogleApiClient();
     }
@@ -174,6 +190,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
             mMqttConnectButton.setText("Conectar\nRADIO");
         }
+        SinalRest.enviaSinais(getApplicationContext());
     }
 
     @Override
@@ -205,7 +222,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     public void onLocationChanged(Location location) {
         mLastLocation = location;
-        updateLocationPoint(location);
+//        updateLocationPoint(location);
+        checkRadioConnection();
     }
 
     @Override
@@ -270,86 +288,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             mStatusConexaoTextView.setBackgroundColor(Color.YELLOW);
         }
         if (connected == 1) {
-            mStatusConexaoTextView.setText("Conexão WiFi: " + networkInfo.getExtraInfo());
+            mStatusConexaoTextView.setText(networkInfo.getExtraInfo());
             mStatusConexaoTextView.setTypeface(null, Typeface.NORMAL);
             mStatusConexaoTextView.setTextColor(Color.BLACK);
             mStatusConexaoTextView.setBackgroundColor(Color.TRANSPARENT);
         }
         if (connected == 2) {
-            mStatusConexaoTextView.setText("Conexão 3G: " + networkInfo.getExtraInfo());
+            mStatusConexaoTextView.setText(networkInfo.getExtraInfo() + " (3G)");
             mStatusConexaoTextView.setTypeface(null, Typeface.NORMAL);
             mStatusConexaoTextView.setTextColor(Color.BLACK);
             mStatusConexaoTextView.setBackgroundColor(Color.TRANSPARENT);
-        }
-    }
-
-    public class PowerRatingTask extends AsyncTask<String, Void, Boolean> {
-
-        ProgressDialog progDailog;
-        String error;
-        boolean progDailogStatus = true;
-
-        public PowerRatingTask() {
-        }
-
-        public PowerRatingTask(boolean progDailogStatus) {
-            this.progDailogStatus = progDailogStatus;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            progDailog = new ProgressDialog(MainActivity.this);
-            progDailog.setMessage("Procurando...");
-            progDailog.setIndeterminate(false);
-            progDailog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-            progDailog.setCancelable(true);
-
-            if (progDailogStatus)
-                progDailog.show();
-        }
-
-        @Override
-        protected Boolean doInBackground(final String... params) {
-            Log.i("Power Rating Task", "json -" + params[0]);
-
-            try {
-                HashMap<String, String> header = new HashMap<>();
-                header.put("content-type", ContentType.JSON.getType());
-
-                Radio.getInstance(getApplicationContext()).sendPost(
-                        "http://107.170.47.53:9200/teste/point",
-                        header, params[0].getBytes(),
-                        new MessageListener() {
-
-                            @Override
-                            public void result(ProxyRequest request, final ProxyResponse response) {
-                                resultExecute(true, new String(response.getBody()));
-                            }
-                        });
-            } catch (Exception e) {
-                error = e.getMessage();
-                return false;
-            }
-            return true;
-        }
-
-        protected void resultExecute(Boolean result, String message) {
-            progDailog.dismiss();
-            if (result) {
-                Log.i("Teste", "Potencia: -" + message + "db");
-                mGetRadioPowerRatingButton.setText("Potencia: -" + message + "db");
-
-            } else {
-            }
-        }
-
-        protected void onPostExecute(Boolean result) {
-            if (!result) {
-                Toast.makeText(getApplicationContext(), error, Toast.LENGTH_LONG).show();
-                Log.i("Main.sendGetMessage", "Fail.sendPost");
-                progDailog.dismiss();
-            }
         }
     }
 
@@ -361,7 +309,52 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     MainActivity.this.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(getApplicationContext(), "Mensagem MQTT: " + new String(response.getBody()), Toast.LENGTH_LONG).show();
+
+                            String rssi = null;
+                            String localRadio = null;
+                            String proxy = null;
+                            JSONObject jsonObject = null;
+
+                            try {
+                                jsonObject = new JSONObject(new String(response.getBody()));
+                                rssi = jsonObject.getString("rssi");
+                                localRadio = jsonObject.getString("radio_local");
+                                proxy = jsonObject.getString("proxy");
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+
+                            mRssiTextView.setText(rssi);
+                            mRssiTextView.setTypeface(null, Typeface.NORMAL);
+                            mRssiTextView.setTextColor(Color.BLACK);
+                            mRssiTextView.setBackgroundColor(Color.TRANSPARENT);
+
+                            mStatusRadioLocalTextView.setText(localRadio);
+                            mStatusRadioLocalTextView.setTypeface(null, Typeface.NORMAL);
+                            mStatusRadioLocalTextView.setTextColor(Color.BLACK);
+                            mStatusRadioLocalTextView.setBackgroundColor(Color.TRANSPARENT);
+
+                            mStatusProxyTextView.setText(proxy);
+                            mStatusProxyTextView.setTypeface(null, Typeface.NORMAL);
+                            mStatusProxyTextView.setTextColor(Color.BLACK);
+                            mStatusProxyTextView.setBackgroundColor(Color.TRANSPARENT);
+
+                            Sinal sinal = new Sinal();
+
+                            try {
+                                com.maykot.maykottracker.models.Location location = new com.maykot.maykottracker.models.Location(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                                sinal.setDate(new Date());
+                                sinal.setLocation(location);
+                                sinal.setRssi(Integer.parseInt(rssi));
+
+                                sinal.salva(DataBaseOpenHelper.getInstance(getApplicationContext()).getDatabase());
+
+                                Notifcation.notifyPoint(MainActivity.this, sinal, mSharedPreferences);
+
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+
                         }
                     });
                 }
@@ -373,6 +366,42 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             //falha no mqtt
             Toast.makeText(getApplicationContext(), "Mensagem Fail: ", Toast.LENGTH_LONG).show();
         }
+    }
+
+    public void updateLocationPoint(Location location) {
+
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    /**
+     * Converte a velocidade de metros/segundo para kilometros/hora
+     */
+    private int msToKmh(float speed) {
+        return Math.round(3.6f * speed);
+    }
+
+    private String formatDate(Date date) {
+        return new SimpleDateFormat("HH:mm:ss").format(date);
     }
 
     public class MqttTask extends AsyncTask<Void, Void, Boolean> {
@@ -417,67 +446,5 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             progDailog.dismiss();
         }
 
-    }
-
-    public void updateLocationPoint(Location location) {
-        Point point = new Point();
-        point.savePoint(this, location);
-
-        PowerRatingTask powerRatingTask = new PowerRatingTask(false);
-        powerRatingTask.execute(point.objToJson());
-
-        Notifcation.notifyPoint(this, point, mSharedPreferences);
-
-        Log.i(TAG, point.toString());
-    }
-
-    private void powerRating() {
-
-        Point point = new Point();
-
-        if (mLastLocation != null) {
-            point.setLatitude(mLastLocation.getLatitude());
-            point.setLongitude(mLastLocation.getLongitude());
-            point.setAccuracy((int) mLastLocation.getAccuracy());
-            point.setSpeed(msToKmh(mLastLocation.getSpeed()));
-        }
-
-        PowerRatingTask powerRatingTask = new PowerRatingTask();
-        powerRatingTask.execute(point.objToJson());
-
-    }
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-
-    /**
-     * Converte a velocidade de metros/segundo para kilometros/hora
-     */
-    private int msToKmh(float speed) {
-        return Math.round(3.6f * speed);
-    }
-
-    private String formatDate(Date date) {
-        return new SimpleDateFormat("HH:mm:ss").format(date);
     }
 }

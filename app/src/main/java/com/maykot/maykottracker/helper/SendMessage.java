@@ -5,8 +5,6 @@ import android.content.Context;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.google.gson.Gson;
-import com.maykot.maykottracker.models.Point;
 import com.maykot.radiolibrary.ContentType;
 import com.maykot.radiolibrary.Radio;
 import com.maykot.radiolibrary.interfaces.MessageListener;

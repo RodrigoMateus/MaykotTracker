@@ -2,9 +2,11 @@ package com.maykot.radiolibrary;
 
 import android.content.Context;
 import android.util.Log;
+
 import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
+
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -12,6 +14,7 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONObject;
+
 import java.io.Serializable;
 import java.util.HashMap;
 
@@ -22,8 +25,8 @@ public class Radio implements MqttCallback, Serializable {
     public static int QoS = 2;
     public static String MQTT_CLIENT_ID = null;
     public static String SUBSCRIBED_TOPIC = null;
-    //    public static final String REQUEST_MQTT_TOPIC = "maykot/get_rssi/";
-    public static final String REQUEST_MQTT_TOPIC = "maykot/request/";
+    public static final String REQUEST_MQTT_TOPIC = "maykot/get_rssi/";
+    //    public static final String REQUEST_MQTT_TOPIC = "maykot/request/";
     public static final String TOPIC_HTTP_CHECK = "maykot/check/";
 
     public String urlMQTT = null;
