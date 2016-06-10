@@ -3,7 +3,6 @@ package com.maykot.maykottracker;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.location.Location;
@@ -30,7 +29,6 @@ import com.maykot.maykottracker.dao.DataBaseOpenHelper;
 import com.maykot.maykottracker.helper.Notifcation;
 import com.maykot.maykottracker.models.Sinal;
 import com.maykot.maykottracker.rest.SinalRest;
-import com.maykot.radiolibrary.ContentType;
 import com.maykot.radiolibrary.Radio;
 import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.model.ProxyRequest;
@@ -41,7 +39,6 @@ import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
@@ -140,6 +137,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 mStartTrackingButton.setEnabled(true);
                 mStopTrackingButton.setBackgroundColor(Color.GRAY);
                 mStopTrackingButton.setEnabled(false);
+
+                new EnviaSinaisTask().execute();
             }
         });
 
@@ -173,6 +172,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         buildGoogleApiClient();
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        new EnviaSinaisTask().execute();
+    }
+
     private void connectMqtt() {
         MqttTask mqttTask = new MqttTask();
         mqttTask.execute();
@@ -190,7 +195,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
             mMqttConnectButton.setText("Conectar\nRADIO");
         }
-        SinalRest.enviaSinais(getApplicationContext());
     }
 
     @Override
@@ -368,10 +372,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    public void updateLocationPoint(Location location) {
-
-    }
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -431,8 +431,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             } catch (Exception e) {
                 return false;
             }
-
-        }
+       }
 
         protected void onPostExecute(Boolean result) {
             if (result) {
@@ -447,4 +446,35 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
 
     }
+
+    private class EnviaSinaisTask extends AsyncTask<Void, Void, Integer> {
+
+        ProgressDialog progDailog;
+        String error;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            progDailog = new ProgressDialog(MainActivity.this);
+            progDailog.setMessage("Iniciando sincronização com servidor");
+            progDailog.setIndeterminate(false);
+            progDailog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            progDailog.setCancelable(true);
+            progDailog.show();
+        }
+
+        @Override
+        protected Integer doInBackground(Void... params) {
+            return SinalRest.enviaSinais(getApplicationContext());
+        }
+
+        protected void onPostExecute(Integer result) {
+            if(result > 0) {
+                Toast.makeText(getApplicationContext(), result + " itens sendo sincronizados com o servidor", Toast.LENGTH_LONG).show();
+            }
+            progDailog.dismiss();
+        }
+    }
+
 }

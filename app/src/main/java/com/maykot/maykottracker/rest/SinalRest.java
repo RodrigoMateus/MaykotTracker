@@ -35,7 +35,9 @@ public class SinalRest {
         );
     }
 
-    public static void enviaSinais(Context context) {
+    public static int enviaSinais(Context context) {
+        int qunantidadeSinais = 0;
+
         Gson gson = new GsonBuilder()
                 .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
                 .create();
@@ -50,6 +52,9 @@ public class SinalRest {
 
         final SQLiteDatabase database = DataBaseOpenHelper.getInstance(context).getDatabase();
         List<Sinal> sinals = Sinal.list(database);
+
+        qunantidadeSinais = sinals.size();
+
         for (final Sinal sinal : sinals) {
             Log.i(TAG, "Enviando " + sinal.toString());
 
@@ -75,5 +80,7 @@ public class SinalRest {
                 }
             });
         }
+
+        return qunantidadeSinais;
     }
 }
