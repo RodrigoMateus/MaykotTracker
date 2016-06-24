@@ -10,6 +10,7 @@ android {
         targetSdkVersion 22
         versionCode 1
         versionName "1.0"
+        multiDexEnabled true
     }
     buildTypes {
         release {
@@ -27,4 +28,9 @@ dependencies {
     compile 'com.google.android.gms:play-services-ads:9.0.1'
     compile 'com.google.android.gms:play-services-auth:9.0.1'
     compile 'com.google.android.gms:play-services-gcm:9.0.1'
+    compile 'ch.acra:acra:4.8.2'
+
+    /* HTTP e webservices */
+    compile 'com.squareup.retrofit2:retrofit:2.0.2'
+    compile 'com.squareup.retrofit2:converter-gson:2.0.2'
 }

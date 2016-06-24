@@ -12,6 +12,7 @@ public class ProxyResponse implements Serializable {
     private String mqttClientId;
     private String idMessage;
     private byte[] body;
+    private String verb;
 
     public ProxyResponse(int statusCode, String contentType, byte[] body) {
         super();
@@ -34,6 +35,12 @@ public class ProxyResponse implements Serializable {
     public void setIdMessage(String idMessage) { this.idMessage = idMessage; }
 
     public byte[] getBody() { return body; }
+
+    public void setBody(byte[] body) { this.body = body; }
+
+    public String getVerb() { return verb; }
+
+    public void setVerb(String verb) { this.verb = verb; }
 
     @Override
     public String toString() {

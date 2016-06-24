@@ -1,13 +1,10 @@
 package com.maykot.radiolibrary;
 
 import android.util.Log;
-
 import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
-
 import org.apache.commons.lang3.SerializationUtils;
-
 import java.util.Date;
 import java.util.HashMap;
 
@@ -30,6 +27,19 @@ public class HttpPostSerializer {
         Log.i("HttpPost", proxyRequest.getIdMessage());
 
         return new Payload(proxyRequest.getIdMessage(), SerializationUtils.serialize(proxyRequest));
+    }
+
+    public static Payload dataToCheck(String contentType, byte[] body, MessageListener messageListener)
+
+    {
+        ProxyRequest proxyRequest = new ProxyRequest();
+        proxyRequest.setBody(body);
+        proxyRequest.setIdMessage(String.valueOf(new Date().getTime()));
+        proxyRequest.setVerb(Verb.CHECK.getVerb());
+
+        CacheMessage.getInstance().addMessage(proxyRequest.getIdMessage(), messageListener, proxyRequest);
+
+        return new Payload(proxyRequest.getIdMessage(),SerializationUtils.serialize(proxyRequest));
     }
 
     public static Payload dataToGet(String url, HashMap<String, String> header, MessageListener messageListener) {

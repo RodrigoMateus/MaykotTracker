@@ -1,6 +1,9 @@
 package com.maykot.radiolibrary.model;
 
+import org.apache.commons.lang3.SerializationUtils;
+
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class ProxyRequest implements Serializable {
@@ -36,4 +39,15 @@ public class ProxyRequest implements Serializable {
     public byte[] getBody() { return body; }
 
     public void setBody(byte[] body) { this.body = body; }
+
+    public void setMultiPart(MultiPart multiPart){
+        this.body = SerializationUtils.serialize(multiPart);
+    }
+
+    @Override
+    public String toString() {
+        return "ProxyRequest [verb=" + verb + ", url=" + url + ", idMessage="
+                + idMessage + ", body=" + Arrays.toString(body) + "]";
+    }
+
 }
