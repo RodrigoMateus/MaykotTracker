@@ -30,9 +30,12 @@ import com.maykot.maykottracker.helper.Notifcation;
 import com.maykot.maykottracker.models.Sinal;
 import com.maykot.maykottracker.rest.SinalRest;
 import com.maykot.radiolibrary.Radio;
+import com.maykot.radiolibrary.interfaces.ConnectListener;
 import com.maykot.radiolibrary.interfaces.MessageListener;
+import com.maykot.radiolibrary.interfaces.PushListener;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
+import com.maykot.radiolibrary.model.TypeDataPush;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -91,6 +94,26 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }
                 }
                 checkRadioConnection();
+
+                try {
+                    Radio.getInstance(getApplicationContext()).connect("ricardo", new ConnectListener() {
+                        @Override
+                        public void result(String response, int status) {
+                            Log.i("Testetet",response +" "+status);
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                PushListener pushListener = new PushListener() {
+                    @Override
+                    public void push(byte[] file, TypeDataPush typeDataPush, String fileName) {
+
+                    }
+                };
+
+                Radio.getInstance(getApplicationContext()).addPushListeners(pushListener);
             }
         });
 
@@ -170,6 +193,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //        });
 
         buildGoogleApiClient();
+
     }
 
     @Override
@@ -306,6 +330,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     public void checkRadioConnection() {
+
+
         try {
             Radio.getInstance(getApplicationContext()).sendCheckRadio(new MessageListener() {
                 @Override
