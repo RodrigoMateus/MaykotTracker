@@ -46,28 +46,28 @@ import java.util.Date;
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
 
-    public static final String DEFAULT_SHARED_PREFERENCES = "maykot";
-    public static final String NOTIFY_LOCATION = "notify_location";
-    public static final String URL_BROKER = "url_broker";
-    private static final String TAG = "MainActivity";
-    private NetworkInfo networkInfo;
+    public static final  String DEFAULT_SHARED_PREFERENCES = "maykot";
+    public static final  String NOTIFY_LOCATION            = "notify_location";
+    public static final  String URL_BROKER                 = "url_broker";
+    private static final String TAG                        = "MainActivity";
+    private NetworkInfo       networkInfo;
     /* SharedPreferences file */
     private SharedPreferences mSharedPreferences;
     /*  VIEW */
-    private EditText mMqttUrlEditText;
-    private Button mMqttUrlSaveButton;
-    private Button mMqttConnectButton;
-    private TextView mStatusConexaoTextView;
-    private TextView mStatusRadioLocalTextView;
-    private TextView mStatusProxyTextView;
-    private TextView mRssiTextView;
-    private Button mStartTrackingButton;
-    private Button mStopTrackingButton;
-    private CheckBox mNotifyPositionsCheckBox;
+    private EditText          mMqttUrlEditText;
+    private Button            mMqttUrlSaveButton;
+    private Button            mMqttConnectButton;
+    private TextView          mStatusConexaoTextView;
+    private TextView          mStatusRadioLocalTextView;
+    private TextView          mStatusProxyTextView;
+    private TextView          mRssiTextView;
+    private Button            mStartTrackingButton;
+    private Button            mStopTrackingButton;
+    private CheckBox          mNotifyPositionsCheckBox;
 
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
-    private Location mLastLocation;
+    private Location        mLastLocation;
 
 
     @Override
@@ -96,20 +96,21 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 checkRadioConnection();
 
                 try {
-                    Radio.getInstance(getApplicationContext()).connect("ricardo", new ConnectListener() {
+                    Radio.getInstance(getApplicationContext()).connect("1232323", "ricardo", new ConnectListener() {
                         @Override
                         public void result(String response, int status) {
-                            Log.i("Testetet",response +" "+status);
+                            Log.i("connect", response + " " + status);
                         }
                     });
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.i("connect", e.getMessage());
                 }
+
 
                 PushListener pushListener = new PushListener() {
                     @Override
-                    public void push(byte[] file, TypeDataPush typeDataPush, String fileName) {
-
+                    public void push(byte[] file, String contentType) {
+                        Log.i("push", new String(file));
                     }
                 };
 
@@ -162,6 +163,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 mStopTrackingButton.setEnabled(false);
 
                 new EnviaSinaisTask().execute();
+
+                try {
+                    Radio.getInstance(getApplicationContext()).disconnect("1232323", new ConnectListener() {
+                        @Override
+                        public void result(String response, int status) {
+                            Log.i("disconnect", response);
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -433,7 +445,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public class MqttTask extends AsyncTask<Void, Void, Boolean> {
 
         ProgressDialog progDailog;
-        String error;
+        String         error;
 
         @Override
         protected void onPreExecute() {
@@ -457,7 +469,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             } catch (Exception e) {
                 return false;
             }
-       }
+        }
 
         protected void onPostExecute(Boolean result) {
             if (result) {
@@ -476,7 +488,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private class EnviaSinaisTask extends AsyncTask<Void, Void, Integer> {
 
         ProgressDialog progDailog;
-        String error;
+        String         error;
 
         @Override
         protected void onPreExecute() {
@@ -496,7 +508,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
 
         protected void onPostExecute(Integer result) {
-            if(result > 0) {
+            if (result > 0) {
                 Toast.makeText(getApplicationContext(), result + " itens sendo sincronizados com o servidor", Toast.LENGTH_LONG).show();
             }
             progDailog.dismiss();

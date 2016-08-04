@@ -8,8 +8,7 @@ import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.interfaces.PushListener;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
-import com.maykot.radiolibrary.model.PushMessage;
-import com.maykot.radiolibrary.model.TypeDataPush;
+import com.maykot.radiolibrary.model.Push;
 
 import org.apache.commons.lang3.SerializationUtils;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
@@ -27,22 +26,22 @@ import java.util.HashMap;
 
 public class Radio implements MqttCallback, Serializable {
 
-    public static MqttClient mqttClient;
+    public static MqttClient         mqttClient;
     public static MqttConnectOptions mqttConnectOptions;
-    public static int QoS = 2;
-    public static String MQTT_CLIENT_ID = null;
+    public static       int    QoS                = 2;
+    public static       String MQTT_CLIENT_ID     = null;
     public static final String REQUEST_MQTT_TOPIC = "maykot/get_rssi/";
     //    public static final String REQUEST_MQTT_TOPIC = "maykot/request/";
-    public static final String TOPIC_HTTP_CHECK = "maykot/check/";
+    public static final String TOPIC_HTTP_CHECK   = "maykot/check/";
 
-    public static final String TOPIC_HTTP_CONNECT = "maykot/connect/";
-    public static final String TOPIC_HTTP_DISCONNECT = "maykot/disconnect/";
+    public static final String TOPIC_HTTP_CONNECT      = "maykot/connect/";
+    public static final String TOPIC_HTTP_DISCONNECT   = "maykot/disconnect/";
     public static final String TOPIC_HTTP_CHECKCONFIRM = "maykot/checkconfirm/";
 
     public String urlMQTT = null;
 
     private static Radio radio;
-    private static Monitor monitor = null;
+    private static Monitor monitor  = null;
     private static Context activity = null;
 
     private ArrayList<PushListener> addPushListeners = new ArrayList<PushListener>();
@@ -81,7 +80,7 @@ public class Radio implements MqttCallback, Serializable {
             mqttClient.subscribe(new String[]{SUBSCRIBED_TOPIC_CONNECT_CONFIRM,
                     SUBSCRIBED_TOPIC_PUSH,
                     SUBSCRIBED_TOPIC_DISCONNECT_CONFIRM,
-                    SUBSCRIBED_TOPIC_RESPONSE}, new int[]{QoS,QoS,QoS,QoS});
+                    SUBSCRIBED_TOPIC_RESPONSE}, new int[]{QoS, QoS, QoS, QoS});
 
             return true;
         } catch (MqttException e1) {
@@ -213,7 +212,7 @@ public class Radio implements MqttCallback, Serializable {
         }
     }
 
-    public void connect(String user, ConnectListener connectListener)
+    public void connect(String token, String user, ConnectListener connectListener)
             throws Exception {
 
         if (!mqttClient.isConnected()) {
@@ -222,7 +221,7 @@ public class Radio implements MqttCallback, Serializable {
 
         long messageId = new Date().getTime();
 
-        String message = MQTT_CLIENT_ID+"#"+messageId+"#"+user;
+        String message = MQTT_CLIENT_ID + "#" + messageId + "#" + user + "#" + token;
 
         CacheConnect.getInstance().addMessage(messageId, connectListener);
 
@@ -243,7 +242,7 @@ public class Radio implements MqttCallback, Serializable {
         }
     }
 
-    public void disconnect(ConnectListener connectListener)
+    public void disconnect(String token, ConnectListener connectListener)
             throws Exception {
 
         if (!mqttClient.isConnected()) {
@@ -252,7 +251,7 @@ public class Radio implements MqttCallback, Serializable {
 
         long messageId = new Date().getTime();
 
-        String message = MQTT_CLIENT_ID+"#"+messageId;
+        String message = MQTT_CLIENT_ID + "#" + messageId + "#" + token;
 
         CacheConnect.getInstance().addMessage(messageId, connectListener);
 
@@ -330,18 +329,20 @@ public class Radio implements MqttCallback, Serializable {
     @Override
     public void messageArrived(String topic, final MqttMessage mqttMessage) throws Exception {
 
+        Log.i("topic", topic);
+
         if (topic.contains("commandResult")) {
             Log.i("commandResult", new String(mqttMessage.getPayload()));
-        } else if(topic.contains("response")) {
+        } else if (topic.contains("response")) {
             Log.i("Return TOPIC:", topic);
             response(mqttMessage);
-        } else if(topic.contains("connect_confirm")) {
+        } else if (topic.contains("connect_confirm")) {
             Log.i("Return TOPIC:", topic);
             connectConfirm(mqttMessage);
-        } else if(topic.contains("disconnect_confirm")) {
+        } else if (topic.contains("disconnect_confirm")) {
             Log.i("Return TOPIC:", topic);
             disconnectConfirm(mqttMessage);
-        } else if(topic.contains("push")) {
+        } else if (topic.contains("push")) {
             push(mqttMessage);
         }
     }
@@ -357,15 +358,15 @@ public class Radio implements MqttCallback, Serializable {
 //        }
     }
 
-    private void push(MqttMessage mqttMessage){
-        for(PushListener pushListener : addPushListeners){
-            PushMessage pushMessage = SerializationUtils.deserialize(mqttMessage.getPayload());
-            pushListener.push(pushMessage.getBody(), TypeDataPush.values()[pushMessage.getTypeMessage()], pushMessage.getFileName());
+    private void push(MqttMessage mqttMessage) {
+        for (PushListener pushListener : addPushListeners) {
+            Push pushMessage = SerializationUtils.deserialize(mqttMessage.getPayload());
+            pushListener.push(pushMessage.getBody(), pushMessage.getContentType());
         }
     }
 
-    private void disconnectConfirm(MqttMessage mqttMessage){
-        String response =  SerializationUtils.deserialize(mqttMessage.getPayload());
+    private void disconnectConfirm(MqttMessage mqttMessage) {
+        String response = SerializationUtils.deserialize(mqttMessage.getPayload());
 
         String mqttClient = response.split("#")[0];
         String messageId = response.split("#")[1];

@@ -8,6 +8,6 @@ import java.io.Serializable;
 
 public interface PushListener extends Serializable {
 
-    void push(byte[] file, TypeDataPush typeDataPush, String fileName);
+    void push(byte[] file, String contentType);
 
 }
