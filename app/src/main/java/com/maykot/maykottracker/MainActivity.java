@@ -1,7 +1,11 @@
 package com.maykot.maykottracker;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -50,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public static final  String NOTIFY_LOCATION            = "notify_location";
     public static final  String URL_BROKER                 = "url_broker";
     private static final String TAG                        = "MainActivity";
+
     private NetworkInfo       networkInfo;
     /* SharedPreferences file */
     private SharedPreferences mSharedPreferences;
@@ -69,11 +74,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private LocationRequest mLocationRequest;
     private Location        mLastLocation;
 
+    private String  token;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        new EnviaSinaisTask().execute();
+
+        token = String.valueOf(new Date().getTime());
 
         Radio.getInstance(this);
 
@@ -96,7 +107,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 checkRadioConnection();
 
                 try {
-                    Radio.getInstance(getApplicationContext()).connect("1232323", "ricardo", new ConnectListener() {
+                    Radio.getInstance(getApplicationContext()).connect(token,"sinais", new ConnectListener() {
                         @Override
                         public void result(String response, int status) {
                             Log.i("connect", response + " " + status);
@@ -106,14 +117,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     Log.i("connect", e.getMessage());
                 }
 
-
                 PushListener pushListener = new PushListener() {
                     @Override
                     public void push(byte[] file, String contentType) {
                         Log.i("push", new String(file));
                     }
                 };
-
                 Radio.getInstance(getApplicationContext()).addPushListeners(pushListener);
             }
         });
@@ -146,6 +155,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 mStopTrackingButton.setBackgroundColor(getResources().getColor(R.color.redButton));
                 mStopTrackingButton.setEnabled(true);
 
+                try {
+                    Radio.getInstance(getApplicationContext()).connect(token, "sinais", new ConnectListener() {
+                        @Override
+                        public void result(String response, int status) {
+                            Log.i("connect", response + " " + status);
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.i("connect", e.getMessage());
+                }
+
             }
         });
 
@@ -165,7 +185,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 new EnviaSinaisTask().execute();
 
                 try {
-                    Radio.getInstance(getApplicationContext()).disconnect("1232323", new ConnectListener() {
+                    Radio.getInstance(getApplicationContext()).disconnect(token, new ConnectListener() {
                         @Override
                         public void result(String response, int status) {
                             Log.i("disconnect", response);
@@ -513,6 +533,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
             progDailog.dismiss();
         }
+    }
+
+    private void Notify(String notificationTitle, String notificationMessage){
+
     }
 
 }

@@ -44,6 +44,9 @@ public class Radio implements MqttCallback, Serializable {
     private static Monitor monitor  = null;
     private static Context activity = null;
 
+    private String token;
+    private String user;
+
     private ArrayList<PushListener> addPushListeners = new ArrayList<PushListener>();
 
     public static Radio getInstance(Context activity) {
@@ -215,6 +218,9 @@ public class Radio implements MqttCallback, Serializable {
     public void connect(String token, String user, ConnectListener connectListener)
             throws Exception {
 
+        this.token = token;
+        this.user = user;
+
         if (!mqttClient.isConnected()) {
             throw new Exception("Client MQTT not conntect");
         }
@@ -359,10 +365,10 @@ public class Radio implements MqttCallback, Serializable {
     }
 
     private void push(MqttMessage mqttMessage) {
-        for (PushListener pushListener : addPushListeners) {
-            Push pushMessage = SerializationUtils.deserialize(mqttMessage.getPayload());
-            pushListener.push(pushMessage.getBody(), pushMessage.getContentType());
-        }
+        Push pushMessage = SerializationUtils.deserialize(mqttMessage.getPayload());
+            for (PushListener pushListener : addPushListeners) {
+                pushListener.push(pushMessage.getBody(), pushMessage.getContentType());
+            }
     }
 
     private void disconnectConfirm(MqttMessage mqttMessage) {
