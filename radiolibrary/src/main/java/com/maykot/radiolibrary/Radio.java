@@ -6,6 +6,7 @@ import android.util.Log;
 import com.maykot.radiolibrary.interfaces.ConnectListener;
 import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.interfaces.PushListener;
+import com.maykot.radiolibrary.model.ConnectApp;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
 import com.maykot.radiolibrary.model.Push;
@@ -36,8 +37,8 @@ public class Radio implements MqttCallback, Serializable {
 
     public static final String TOPIC_HTTP_CONNECT      = "maykot/connect/";
     public static final String TOPIC_HTTP_DISCONNECT   = "maykot/disconnect/";
-    public static final String TOPIC_HTTP_CHECKCONFIRM = "maykot/checkconfirm/";
-
+    public static final String TOPIC_HTTP_CHECKCONFIRM = "maykot/check_confirm/";
+    public static final String TOPIC_HTTP_PUSHSEND = "maykot/push_send/";
     public String urlMQTT = null;
 
     private static Radio radio;
@@ -45,7 +46,7 @@ public class Radio implements MqttCallback, Serializable {
     private static Context activity = null;
 
     private String token;
-    private String user;
+    private ConnectApp connectApp;
 
     private ArrayList<PushListener> addPushListeners = new ArrayList<PushListener>();
 
@@ -75,15 +76,19 @@ public class Radio implements MqttCallback, Serializable {
             String SUBSCRIBED_TOPIC_RESPONSE = "maykot/response/" + MQTT_CLIENT_ID + "/#";
             String SUBSCRIBED_TOPIC_CONNECT_CONFIRM = "maykot/connect_confirm/" + MQTT_CLIENT_ID + "/#";
             String SUBSCRIBED_TOPIC_DISCONNECT_CONFIRM = "maykot/disconnect_confirm/" + MQTT_CLIENT_ID + "/#";
-            String SUBSCRIBED_TOPIC_PUSH = "maykot/push/" + MQTT_CLIENT_ID + "/#";
+            String SUBSCRIBED_TOPIC_PUSH_RECEIVE = "maykot/push_receive/" + MQTT_CLIENT_ID + "/#";
+            String SUBSCRIBED_TOPIC_CHECK = "maykot/check_connect/" + MQTT_CLIENT_ID + "/#";
+
 
             mqttClient = new MqttClient(urlMQTT, MQTT_CLIENT_ID, null);
             mqttClient.setCallback(this);
             mqttClient.connect();
             mqttClient.subscribe(new String[]{SUBSCRIBED_TOPIC_CONNECT_CONFIRM,
-                    SUBSCRIBED_TOPIC_PUSH,
+                    SUBSCRIBED_TOPIC_PUSH_RECEIVE,
                     SUBSCRIBED_TOPIC_DISCONNECT_CONFIRM,
-                    SUBSCRIBED_TOPIC_RESPONSE}, new int[]{QoS, QoS, QoS, QoS});
+                    SUBSCRIBED_TOPIC_RESPONSE,
+                    SUBSCRIBED_TOPIC_CHECK,
+            }, new int[]{QoS, QoS, QoS, QoS, QoS});
 
             return true;
         } catch (MqttException e1) {
@@ -219,7 +224,6 @@ public class Radio implements MqttCallback, Serializable {
             throws Exception {
 
         this.token = token;
-        this.user = user;
 
         if (!mqttClient.isConnected()) {
             throw new Exception("Client MQTT not conntect");
@@ -227,7 +231,11 @@ public class Radio implements MqttCallback, Serializable {
 
         long messageId = new Date().getTime();
 
-        String message = MQTT_CLIENT_ID + "#" + messageId + "#" + user + "#" + token;
+        connectApp = new ConnectApp();
+        connectApp.token = token;
+        connectApp.messageId = String.valueOf(messageId);
+        connectApp.mqttClient = MQTT_CLIENT_ID;
+        connectApp.user = user;
 
         CacheConnect.getInstance().addMessage(messageId, connectListener);
 
@@ -235,8 +243,45 @@ public class Radio implements MqttCallback, Serializable {
             try {
                 MqttMessage mqttMessage = new MqttMessage();
                 mqttMessage.setQos(QoS);
-                mqttMessage.setPayload(SerializationUtils.serialize(message));
+                mqttMessage.setPayload(SerializationUtils.serialize(connectApp));
                 mqttClient.publish(TOPIC_HTTP_CONNECT + MQTT_CLIENT_ID + "/" + messageId, mqttMessage);
+            } catch (MqttException e) {
+                Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
+                throw new Exception("Publish failed with reason code = " + e.getReasonCode());
+            } catch (Exception e) {
+                Log.d(getClass().getCanonicalName(), "Publish failed with reason code = ");
+                throw new Exception("Publish failed with reason code = ");
+
+            }
+        }
+    }
+
+    public void pushSend(ConnectApp connectAppDest, byte[] body, String contentType , ConnectListener connectListener)
+            throws Exception {
+
+        this.token = token;
+
+        Push push = new Push();
+        push.setContentType(contentType);
+        push.setBody(body);
+        push.setTokenId(connectApp.token);
+        push.setMqttClientId(mqttClient.getClientId());
+
+        if (!mqttClient.isConnected()) {
+            throw new Exception("Client MQTT not conntect");
+        }
+
+        long messageId = new Date().getTime();
+
+
+        //CacheConnect.getInstance().addMessage(messageId, connectListener);
+
+        if (mqttClient.isConnected()) {
+            try {
+                MqttMessage mqttMessage = new MqttMessage();
+                mqttMessage.setQos(QoS);
+                mqttMessage.setPayload(SerializationUtils.serialize(push));
+                mqttClient.publish(TOPIC_HTTP_PUSHSEND + MQTT_CLIENT_ID + "/" + messageId, mqttMessage);
             } catch (MqttException e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
                 throw new Exception("Publish failed with reason code = " + e.getReasonCode());
@@ -257,7 +302,7 @@ public class Radio implements MqttCallback, Serializable {
 
         long messageId = new Date().getTime();
 
-        String message = MQTT_CLIENT_ID + "#" + messageId + "#" + token;
+        connectApp.messageId = String.valueOf(messageId);
 
         CacheConnect.getInstance().addMessage(messageId, connectListener);
 
@@ -265,7 +310,7 @@ public class Radio implements MqttCallback, Serializable {
             try {
                 MqttMessage mqttMessage = new MqttMessage();
                 mqttMessage.setQos(QoS);
-                mqttMessage.setPayload(SerializationUtils.serialize(message));
+                mqttMessage.setPayload(SerializationUtils.serialize(connectApp));
                 mqttClient.publish(TOPIC_HTTP_DISCONNECT + MQTT_CLIENT_ID + "/" + messageId, mqttMessage);
             } catch (MqttException e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
@@ -337,19 +382,23 @@ public class Radio implements MqttCallback, Serializable {
 
         Log.i("topic", topic);
 
-        if (topic.contains("commandResult")) {
+        topic = topic.split("/")[1];
+
+        if (topic.contentEquals("commandResult")) {
             Log.i("commandResult", new String(mqttMessage.getPayload()));
-        } else if (topic.contains("response")) {
+        } else if (topic.contentEquals("response")) {
             Log.i("Return TOPIC:", topic);
             response(mqttMessage);
-        } else if (topic.contains("connect_confirm")) {
+        } else if (topic.contentEquals("connect_confirm")) {
             Log.i("Return TOPIC:", topic);
             connectConfirm(mqttMessage);
-        } else if (topic.contains("disconnect_confirm")) {
+        } else if (topic.contentEquals("disconnect_confirm")) {
             Log.i("Return TOPIC:", topic);
             disconnectConfirm(mqttMessage);
-        } else if (topic.contains("push")) {
-            push(mqttMessage);
+        } else if (topic.contentEquals("push_receive")) {
+            pushReceive(mqttMessage);
+        } else if (topic.contentEquals("check_connect")) {
+            checkConnect(mqttMessage);
         }
     }
 
@@ -364,7 +413,36 @@ public class Radio implements MqttCallback, Serializable {
 //        }
     }
 
-    private void push(MqttMessage mqttMessage) {
+    private void checkConnect(MqttMessage mqttMessage) {
+        ArrayList<ConnectApp> connectApps = SerializationUtils.deserialize(mqttMessage.getPayload());
+        ConnectAppChat.getInstance().updateList(connectApps);
+
+        mqttMessage.clearPayload();
+
+        try {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    if (connectApp != null) {
+
+                        try {
+                            MqttMessage mqttMessage = new MqttMessage();
+                            mqttMessage.setQos(QoS);
+                            mqttMessage.setPayload(SerializationUtils.serialize(connectApp));
+                            mqttClient.publish(TOPIC_HTTP_CHECKCONFIRM + MQTT_CLIENT_ID + "/" + new Date().getTime(), mqttMessage);
+                        } catch (MqttException e) {
+                            Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
+                        } catch (Exception ex) {
+                            Log.i("sendGet.exception", "Falhou!", ex);
+                        }
+                    }
+                }
+            }).start();
+        }catch (Exception e){}
+
+    }
+
+    private void pushReceive(MqttMessage mqttMessage) {
         Push pushMessage = SerializationUtils.deserialize(mqttMessage.getPayload());
             for (PushListener pushListener : addPushListeners) {
                 pushListener.push(pushMessage.getBody(), pushMessage.getContentType());
@@ -383,7 +461,7 @@ public class Radio implements MqttCallback, Serializable {
     }
 
     private void connectConfirm(MqttMessage mqttMessage) {
-        String response = SerializationUtils.deserialize(mqttMessage.getPayload());
+        String response = new String(mqttMessage.getPayload());
 
         String mqttClient = response.split("#")[0];
         String messageId = response.split("#")[1];

@@ -1,18 +1,23 @@
 package com.maykot.radiolibrary.model;
 
+
 import java.io.Serializable;
+
 
 public class Push implements Serializable {
 
+
     private static final long serialVersionUID = 1L;
 
+
     private String mqttClientId;
-
     private String messageId;
-
     private byte[] body;
-
     private String contentType;
+    private String destAddressRadio;
+
+    private String tokenId;
+
 
     public String getMqttClientId() {
 
@@ -61,4 +66,30 @@ public class Push implements Serializable {
         this.messageId = messageId;
 
     }
+
+    public String getDestAddressRadio() {
+
+        return destAddressRadio;
+
+    }
+
+    public void setDestAddressRadio(String destAddressRadio) {
+
+        this.destAddressRadio = destAddressRadio;
+
+    }
+
+    public String getTokenId() {
+
+        return tokenId;
+
+    }
+
+    public void setTokenId(String tokenId) {
+
+        this.tokenId = tokenId;
+
+    }
+
+
 }

@@ -12,6 +12,7 @@ import android.graphics.Typeface;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -25,18 +26,23 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.maykot.maykottracker.dao.DataBaseOpenHelper;
 import com.maykot.maykottracker.helper.Notifcation;
 import com.maykot.maykottracker.models.Sinal;
 import com.maykot.maykottracker.rest.SinalRest;
+import com.maykot.radiolibrary.ConnectAppChat;
 import com.maykot.radiolibrary.Radio;
 import com.maykot.radiolibrary.interfaces.ConnectListener;
 import com.maykot.radiolibrary.interfaces.MessageListener;
 import com.maykot.radiolibrary.interfaces.PushListener;
+import com.maykot.radiolibrary.model.ConnectApp;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
 import com.maykot.radiolibrary.model.TypeDataPush;
@@ -48,33 +54,38 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
+        GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
-    public static final  String DEFAULT_SHARED_PREFERENCES = "maykot";
-    public static final  String NOTIFY_LOCATION            = "notify_location";
-    public static final  String URL_BROKER                 = "url_broker";
-    private static final String TAG                        = "MainActivity";
+    public static final String DEFAULT_SHARED_PREFERENCES = "maykot";
+    public static final String NOTIFY_LOCATION = "notify_location";
+    public static final String URL_BROKER = "url_broker";
+    private static final String TAG = "MainActivity";
 
-    private NetworkInfo       networkInfo;
+    private NetworkInfo networkInfo;
     /* SharedPreferences file */
     private SharedPreferences mSharedPreferences;
     /*  VIEW */
-    private EditText          mMqttUrlEditText;
-    private Button            mMqttUrlSaveButton;
-    private Button            mMqttConnectButton;
-    private TextView          mStatusConexaoTextView;
-    private TextView          mStatusRadioLocalTextView;
-    private TextView          mStatusProxyTextView;
-    private TextView          mRssiTextView;
-    private Button            mStartTrackingButton;
-    private Button            mStopTrackingButton;
-    private CheckBox          mNotifyPositionsCheckBox;
+    private EditText mMqttUrlEditText;
+    private Button mMqttUrlSaveButton;
+    private Button mMqttConnectButton;
+    private TextView mStatusConexaoTextView;
+    private TextView mStatusRadioLocalTextView;
+    private TextView mStatusProxyTextView;
+    private TextView mRssiTextView;
+    private Button mStartTrackingButton;
+    private Button mStopTrackingButton;
+    private CheckBox mNotifyPositionsCheckBox;
 
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
-    private Location        mLastLocation;
+    private Location mLastLocation;
 
-    private String  token;
+    private String token;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
 
     @Override
@@ -104,10 +115,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         e.printStackTrace();
                     }
                 }
-                checkRadioConnection();
+//                checkRadioConnection();
 
                 try {
-                    Radio.getInstance(getApplicationContext()).connect(token,"sinais", new ConnectListener() {
+                    Radio.getInstance(getApplicationContext()).connect(token, "teste", new ConnectListener() {
                         @Override
                         public void result(String response, int status) {
                             Log.i("connect", response + " " + status);
@@ -117,13 +128,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     Log.i("connect", e.getMessage());
                 }
 
-                PushListener pushListener = new PushListener() {
-                    @Override
-                    public void push(byte[] file, String contentType) {
-                        Log.i("push", new String(file));
-                    }
-                };
-                Radio.getInstance(getApplicationContext()).addPushListeners(pushListener);
             }
         });
 
@@ -156,15 +160,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 mStopTrackingButton.setEnabled(true);
 
                 try {
-                    Radio.getInstance(getApplicationContext()).connect(token, "sinais", new ConnectListener() {
-                        @Override
-                        public void result(String response, int status) {
-                            Log.i("connect", response + " " + status);
-                        }
-                    });
-                } catch (Exception e) {
-                    Log.i("connect", e.getMessage());
-                }
+                    for (ConnectApp connectApp : ConnectAppChat.getInstance().listConnectApp()) {
+                        Radio.getInstance(getApplicationContext()).pushSend(connectApp,
+                                new String("teste").getBytes(), "message", new ConnectListener() {
+                                    @Override
+                                    public void result(String response, int status) {
+
+                                    }
+                                });
+                    }
+                }catch (Exception e){}
+
 
             }
         });
@@ -226,12 +232,45 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         buildGoogleApiClient();
 
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+
+               PushListener pushListener = new PushListener() {
+            @Override
+            public void push(byte[] file, String contentType) {
+                Log.i("push message", new String(file));
+                pushNotification(new String(file));
+            }
+        };
+        Radio.getInstance(getApplicationContext()).addPushListeners(pushListener);
+
+    }
+
+    public void pushNotification(String text){
+        Notifcation.notifyPush(this, text);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
         new EnviaSinaisTask().execute();
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.maykot.maykottracker/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client, viewAction);
     }
 
     private void connectMqtt() {
@@ -462,10 +501,30 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return new SimpleDateFormat("HH:mm:ss").format(date);
     }
 
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.maykot.maykottracker/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
+        client.disconnect();
+    }
+
     public class MqttTask extends AsyncTask<Void, Void, Boolean> {
 
         ProgressDialog progDailog;
-        String         error;
+        String error;
 
         @Override
         protected void onPreExecute() {
@@ -508,7 +567,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private class EnviaSinaisTask extends AsyncTask<Void, Void, Integer> {
 
         ProgressDialog progDailog;
-        String         error;
+        String error;
 
         @Override
         protected void onPreExecute() {
@@ -535,7 +594,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    private void Notify(String notificationTitle, String notificationMessage){
+    private void Notify(String notificationTitle, String notificationMessage) {
 
     }
 

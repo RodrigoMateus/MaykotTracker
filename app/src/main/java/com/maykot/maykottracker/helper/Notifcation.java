@@ -54,6 +54,21 @@ public class Notifcation {
         }
     }
 
+    public static void notifyPush(Activity activity, final String text) {
+
+            NotificationCompat.Builder mBuilder =
+                    new NotificationCompat.Builder(activity)
+                            .setSmallIcon(R.mipmap.ic_launcher)
+                            .setWhen(Calendar.getInstance().getTimeInMillis())
+                            .setDefaults(Notification.DEFAULT_ALL)
+                            .setContentText(text);
+
+            NotificationManager mNotifyMgr =
+                    (NotificationManager) activity.getSystemService(activity.NOTIFICATION_SERVICE);
+            mNotifyMgr.notify(12345, mBuilder.build());
+
+    }
+
     private static String formatDate(Date date) {
         return new SimpleDateFormat("HH:mm:ss").format(date);
     }
