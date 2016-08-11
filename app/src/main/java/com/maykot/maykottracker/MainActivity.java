@@ -15,11 +15,13 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -34,6 +36,7 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.maykot.maykottracker.dao.DataBaseOpenHelper;
+import com.maykot.maykottracker.helper.ChatUser;
 import com.maykot.maykottracker.helper.Notifcation;
 import com.maykot.maykottracker.models.Sinal;
 import com.maykot.maykottracker.rest.SinalRest;
@@ -74,6 +77,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private TextView mRssiTextView;
     private Button mStartTrackingButton;
     private Button mStopTrackingButton;
+
+    private Button mChatButton;
+
     private CheckBox mNotifyPositionsCheckBox;
 
     private GoogleApiClient mGoogleApiClient;
@@ -116,17 +122,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }
                 }
 //                checkRadioConnection();
-
-                try {
-                    Radio.getInstance(getApplicationContext()).connect(token, "teste", new ConnectListener() {
-                        @Override
-                        public void result(String response, int status) {
-                            Log.i("connect", response + " " + status);
-                        }
-                    });
-                } catch (Exception e) {
-                    Log.i("connect", e.getMessage());
-                }
+                new TrackerUser(MainActivity.this);
 
             }
         });
@@ -158,20 +154,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 mStartTrackingButton.setEnabled(false);
                 mStopTrackingButton.setBackgroundColor(getResources().getColor(R.color.redButton));
                 mStopTrackingButton.setEnabled(true);
-
-                try {
-                    for (ConnectApp connectApp : ConnectAppChat.getInstance().listConnectApp()) {
-                        Radio.getInstance(getApplicationContext()).pushSend(connectApp,
-                                new String("teste").getBytes(), "message", new ConnectListener() {
-                                    @Override
-                                    public void result(String response, int status) {
-
-                                    }
-                                });
-                    }
-                }catch (Exception e){}
-
-
             }
         });
 
@@ -230,21 +212,64 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //            }
 //        });
 
+        mChatButton = (Button) findViewById(R.id.btn_chat);
+        mChatButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
+        mChatButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+//                Radio.getInstance().startMonitor();
+                startChat();
+            }
+
+
+        });
+
+        Button mStopChatButton = (Button) findViewById(R.id.btn_stop_chat);
+        mStopChatButton .setBackgroundColor(getResources().getColor(R.color.redButton));
+        mStopChatButton .setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                ConnectApp connectApp = Radio.getInstance(getApplication()).connectApp;
+                if(connectApp != null) {
+                    try {
+                        Radio.getInstance(getApplication()).disconnect(connectApp.token,
+                                new ConnectListener() {
+                                    @Override
+                                    public void result(String response, int status) {
+
+                                    }
+                                });
+                    } catch (Exception e) {}
+                }
+            }
+
+
+        });
+
+
         buildGoogleApiClient();
 
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
 
-               PushListener pushListener = new PushListener() {
+        PushListener pushListener = new PushListener() {
             @Override
             public void push(byte[] file, String contentType) {
                 Log.i("push message", new String(file));
-                pushNotification(new String(file));
+                if(contentType.contentEquals("message"))
+                    pushNotification(new String(file));
             }
         };
         Radio.getInstance(getApplicationContext()).addPushListeners(pushListener);
 
+    }
+
+    public void startChat(){
+        Intent intent = new Intent(MainActivity.this, ChatActivity.class);
+        startActivity(intent);
     }
 
     public void pushNotification(String text){
@@ -592,10 +617,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
             progDailog.dismiss();
         }
-    }
-
-    private void Notify(String notificationTitle, String notificationMessage) {
-
     }
 
 }

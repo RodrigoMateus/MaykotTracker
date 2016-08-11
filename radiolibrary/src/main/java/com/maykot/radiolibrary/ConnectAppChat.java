@@ -1,8 +1,11 @@
 package com.maykot.radiolibrary;
 
+import android.util.Log;
+
 import com.maykot.radiolibrary.model.ConnectApp;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,8 +30,10 @@ public class ConnectAppChat {
         connectAppConcurrentHashMap = new HashMap<>();
     }
 
-    public void updateList(ArrayList<ConnectApp> connectApps){
+    public void updateList(ArrayList<ConnectApp> connectApps, String myMqttId){
         for (ConnectApp connectApp : connectApps){
+            Log.i("update list", connectApp.mqttClient +" : "+ connectApp.user);
+            //if(!connectApp.mqttClient.contentEquals(myMqttId))
             connectAppConcurrentHashMap.put(connectApp.token, connectApp);
         }
     }

@@ -46,7 +46,7 @@ public class Radio implements MqttCallback, Serializable {
     private static Context activity = null;
 
     private String token;
-    private ConnectApp connectApp;
+    public ConnectApp connectApp;
 
     private ArrayList<PushListener> addPushListeners = new ArrayList<PushListener>();
 
@@ -264,12 +264,21 @@ public class Radio implements MqttCallback, Serializable {
         Push push = new Push();
         push.setContentType(contentType);
         push.setBody(body);
-        push.setTokenId(connectApp.token);
-        push.setMqttClientId(mqttClient.getClientId());
+
+        push.setUserSend(connectApp.user);
+        push.setTokenIdSend(connectApp.token);
+        push.setMqttClientIdSend(connectApp.mqttClient);
+
+        push.setTokenIdReceive(connectAppDest.token);
+        push.setAddressRadioReceive(connectAppDest.sourceRadioAddress);
+        push.setMqttClientIdReceive(connectAppDest.mqttClient);
+
+        Log.i("push send", connectAppDest.mqttClient + " : " + connectAppDest.user);
 
         if (!mqttClient.isConnected()) {
             throw new Exception("Client MQTT not conntect");
         }
+
 
         long messageId = new Date().getTime();
 
@@ -415,7 +424,7 @@ public class Radio implements MqttCallback, Serializable {
 
     private void checkConnect(MqttMessage mqttMessage) {
         ArrayList<ConnectApp> connectApps = SerializationUtils.deserialize(mqttMessage.getPayload());
-        ConnectAppChat.getInstance().updateList(connectApps);
+        ConnectAppChat.getInstance().updateList(connectApps, MQTT_CLIENT_ID);
 
         mqttMessage.clearPayload();
 
