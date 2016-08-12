@@ -32,9 +32,10 @@ public class ConnectAppChat {
 
     public void updateList(ArrayList<ConnectApp> connectApps, String myMqttId){
         for (ConnectApp connectApp : connectApps){
-            Log.i("update list", connectApp.mqttClient +" : "+ connectApp.user);
-            //if(!connectApp.mqttClient.contentEquals(myMqttId))
-            connectAppConcurrentHashMap.put(connectApp.token, connectApp);
+            Log.i("update list", connectApp.mqttClient +" : "+ myMqttId);
+            //if(connectApp.mqttClient != null)
+           // if(!connectApp.mqttClient.contentEquals(myMqttId))
+                connectAppConcurrentHashMap.put(connectApp.token, connectApp);
         }
     }
 
@@ -48,6 +49,10 @@ public class ConnectAppChat {
 
     public ArrayList<ConnectApp> listConnectApp() throws Exception{
         return new ArrayList<>(connectAppConcurrentHashMap.values());
+    }
+
+    public void remove(){
+        connectAppConcurrentHashMap.clear();
     }
 
 }

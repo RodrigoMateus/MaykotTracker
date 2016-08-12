@@ -31,10 +31,9 @@ public class Radio implements MqttCallback, Serializable {
     public static MqttConnectOptions mqttConnectOptions;
     public static       int    QoS                = 2;
     public static       String MQTT_CLIENT_ID     = null;
-    public static final String REQUEST_MQTT_TOPIC = "maykot/get_rssi/";
-    //    public static final String REQUEST_MQTT_TOPIC = "maykot/request/";
+    public static final String REQUEST_MQTT_TOPIC = "maykot/request/";
     public static final String TOPIC_HTTP_CHECK   = "maykot/check/";
-
+    public static final String TOPIC__RSSI_TOPIC = "maykot/get_rssi/";
     public static final String TOPIC_HTTP_CONNECT      = "maykot/connect/";
     public static final String TOPIC_HTTP_DISCONNECT   = "maykot/disconnect/";
     public static final String TOPIC_HTTP_CHECKCONFIRM = "maykot/check_confirm/";
@@ -78,6 +77,7 @@ public class Radio implements MqttCallback, Serializable {
             String SUBSCRIBED_TOPIC_DISCONNECT_CONFIRM = "maykot/disconnect_confirm/" + MQTT_CLIENT_ID + "/#";
             String SUBSCRIBED_TOPIC_PUSH_RECEIVE = "maykot/push_receive/" + MQTT_CLIENT_ID + "/#";
             String SUBSCRIBED_TOPIC_CHECK = "maykot/check_connect/" + MQTT_CLIENT_ID + "/#";
+            String SUBSCRIBED_TOPIC_RSSI = "maykot/rssi/" + MQTT_CLIENT_ID + "/#";
 
 
             mqttClient = new MqttClient(urlMQTT, MQTT_CLIENT_ID, null);
@@ -88,7 +88,8 @@ public class Radio implements MqttCallback, Serializable {
                     SUBSCRIBED_TOPIC_DISCONNECT_CONFIRM,
                     SUBSCRIBED_TOPIC_RESPONSE,
                     SUBSCRIBED_TOPIC_CHECK,
-            }, new int[]{QoS, QoS, QoS, QoS, QoS});
+                    SUBSCRIBED_TOPIC_RSSI
+            }, new int[]{QoS, QoS, QoS, QoS, QoS, QoS});
 
             return true;
         } catch (MqttException e1) {
@@ -215,7 +216,33 @@ public class Radio implements MqttCallback, Serializable {
             } catch (Exception e) {
                 Log.d(getClass().getCanonicalName(), "Publish failed with reason code = ");
                 throw new Exception("Publish failed with reason code = ");
+            }
+        }
+    }
 
+    public void pingRadio(ConnectListener connectListener)
+            throws Exception {
+
+        if (!mqttClient.isConnected()) {
+            throw new Exception("Client MQTT not conntect");
+        }
+
+        Long messageId = new Date().getTime();
+
+        CacheRssi.getInstance().addMessage(messageId, connectListener);
+
+        if (mqttClient.isConnected()) {
+            try {
+                MqttMessage mqttMessage = new MqttMessage();
+                mqttMessage.setQos(QoS);
+                mqttMessage.setPayload("".getBytes());
+                mqttClient.publish(TOPIC__RSSI_TOPIC+ MQTT_CLIENT_ID + "/" + String.valueOf(messageId), mqttMessage);
+            } catch (MqttException e) {
+                Log.d(getClass().getCanonicalName(), "Publish failed with reason code = " + e.getReasonCode());
+                throw new Exception("Publish failed with reason code = " + e.getReasonCode());
+            } catch (Exception e) {
+                Log.d(getClass().getCanonicalName(), "Publish failed with reason code = ");
+                throw new Exception("Publish failed with reason code = ");
             }
         }
     }
@@ -330,6 +357,7 @@ public class Radio implements MqttCallback, Serializable {
 
             }
         }
+        connectApp=null;
     }
 
     public void sendGet(String urlCloud, HashMap<String, String> header, MessageListener messageListener)
@@ -408,6 +436,8 @@ public class Radio implements MqttCallback, Serializable {
             pushReceive(mqttMessage);
         } else if (topic.contentEquals("check_connect")) {
             checkConnect(mqttMessage);
+        } else if (topic.contentEquals("rssi")) {
+            ping(mqttMessage);
         }
     }
 
@@ -452,10 +482,12 @@ public class Radio implements MqttCallback, Serializable {
     }
 
     private void pushReceive(MqttMessage mqttMessage) {
-        Push pushMessage = SerializationUtils.deserialize(mqttMessage.getPayload());
+        if(connectApp != null) {
+            Push pushMessage = SerializationUtils.deserialize(mqttMessage.getPayload());
             for (PushListener pushListener : addPushListeners) {
                 pushListener.push(pushMessage.getBody(), pushMessage.getContentType());
             }
+        }
     }
 
     private void disconnectConfirm(MqttMessage mqttMessage) {
@@ -478,6 +510,16 @@ public class Radio implements MqttCallback, Serializable {
 
         ConnectListener messageListener = CacheConnect.getInstance().findMessage(Long.parseLong(messageId));
         messageListener.result(response, Integer.parseInt(status));
+    }
+
+    private void ping(MqttMessage mqttMessage) {
+        String response = new String(mqttMessage.getPayload());
+
+        String messageId = new String(response).split("#")[0];
+        String rssi = new String(response).split("#")[1];
+
+        ConnectListener messageListener = CacheRssi.getInstance().findMessage(Long.parseLong(messageId));
+        messageListener.result(rssi, 200);
     }
 
     private void response(MqttMessage mqttMessage) {

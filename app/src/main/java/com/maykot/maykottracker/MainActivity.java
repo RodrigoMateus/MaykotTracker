@@ -1,8 +1,5 @@
 package com.maykot.maykottracker;
 
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -15,13 +12,11 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -35,8 +30,8 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.maykot.maykottracker.chat.TrackerUser;
 import com.maykot.maykottracker.dao.DataBaseOpenHelper;
-import com.maykot.maykottracker.helper.ChatUser;
 import com.maykot.maykottracker.helper.Notifcation;
 import com.maykot.maykottracker.models.Sinal;
 import com.maykot.maykottracker.rest.SinalRest;
@@ -48,7 +43,6 @@ import com.maykot.radiolibrary.interfaces.PushListener;
 import com.maykot.radiolibrary.model.ConnectApp;
 import com.maykot.radiolibrary.model.ProxyRequest;
 import com.maykot.radiolibrary.model.ProxyResponse;
-import com.maykot.radiolibrary.model.TypeDataPush;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -79,6 +73,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private Button mStopTrackingButton;
 
     private Button mChatButton;
+    private Button mStopChatButton;
 
     private CheckBox mNotifyPositionsCheckBox;
 
@@ -121,8 +116,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         e.printStackTrace();
                     }
                 }
-//                checkRadioConnection();
-                new TrackerUser(MainActivity.this);
+                checkRadioConnection();
+                mChatButton.setEnabled(true);
 
             }
         });
@@ -171,17 +166,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 mStopTrackingButton.setEnabled(false);
 
                 new EnviaSinaisTask().execute();
-
-                try {
-                    Radio.getInstance(getApplicationContext()).disconnect(token, new ConnectListener() {
-                        @Override
-                        public void result(String response, int status) {
-                            Log.i("disconnect", response);
-                        }
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
             }
         });
 
@@ -218,14 +202,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
             @Override
             public void onClick(View v) {
-//                Radio.getInstance().startMonitor();
-                startChat();
+                Intent intent = new Intent(MainActivity.this, ChatActivity.class);
+                startActivity(intent);
             }
 
 
         });
 
-        Button mStopChatButton = (Button) findViewById(R.id.btn_stop_chat);
+        mStopChatButton = (Button) findViewById(R.id.btn_stop_chat);
         mStopChatButton .setBackgroundColor(getResources().getColor(R.color.redButton));
         mStopChatButton .setOnClickListener(new View.OnClickListener() {
 
@@ -238,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                                 new ConnectListener() {
                                     @Override
                                     public void result(String response, int status) {
-
+                                        ConnectAppChat.getInstance().remove();
                                     }
                                 });
                     } catch (Exception e) {}
@@ -267,10 +251,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     }
 
-    public void startChat(){
-        Intent intent = new Intent(MainActivity.this, ChatActivity.class);
-        startActivity(intent);
-    }
 
     public void pushNotification(String text){
         Notifcation.notifyPush(this, text);
@@ -311,9 +291,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (Radio.mqttConnected()) {
             mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
             mMqttConnectButton.setText("RADIO\nOK!");
+            mChatButton.setEnabled(true);
+            mStopChatButton.setEnabled(true);
         } else {
             mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
-            mMqttConnectButton.setText("Conectar\nRADIO");
+            mMqttConnectButton.setText("RADIO\nFail!");
+            mChatButton.setEnabled(false);
+            mStopChatButton.setEnabled(false);
         }
     }
 
@@ -346,8 +330,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     public void onLocationChanged(Location location) {
         mLastLocation = location;
-//        updateLocationPoint(location);
-        checkRadioConnection();
+        pingConnection();
     }
 
     @Override
@@ -427,71 +410,105 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     public void checkRadioConnection() {
 
-
-        try {
-            Radio.getInstance(getApplicationContext()).sendCheckRadio(new MessageListener() {
-                @Override
-                public void result(ProxyRequest request, final ProxyResponse response) {
-                    MainActivity.this.runOnUiThread(new Runnable() {
+                try {
+                    Radio.getInstance(getApplicationContext()).sendCheckRadio(new MessageListener() {
                         @Override
-                        public void run() {
+                        public void result(ProxyRequest request, final ProxyResponse response) {
+                            MainActivity.this.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
 
-                            String rssi = null;
-                            String localRadio = null;
-                            String proxy = null;
-                            JSONObject jsonObject = null;
+                                    String rssi = null;
+                                    String localRadio = null;
+                                    String proxy = null;
+                                    JSONObject jsonObject = null;
 
-                            try {
-                                jsonObject = new JSONObject(new String(response.getBody()));
-                                rssi = jsonObject.getString("rssi");
-                                localRadio = jsonObject.getString("radio_local");
-                                proxy = jsonObject.getString("proxy");
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
+                                    try {
+                                        jsonObject = new JSONObject(new String(response.getBody()));
+                                        localRadio = jsonObject.getString("radio_local");
+                                        proxy = jsonObject.getString("proxy");
+                                        rssi = jsonObject.getString("rssi");
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                        rssi = "0";
+                                    }
 
-                            mRssiTextView.setText(rssi);
+                                    mRssiTextView.setText(rssi);
+                                    mRssiTextView.setTypeface(null, Typeface.NORMAL);
+                                    mRssiTextView.setTextColor(Color.BLACK);
+                                    mRssiTextView.setBackgroundColor(Color.TRANSPARENT);
+
+                                    mStatusRadioLocalTextView.setText(localRadio);
+                                    mStatusRadioLocalTextView.setTypeface(null, Typeface.NORMAL);
+                                    mStatusRadioLocalTextView.setTextColor(Color.BLACK);
+                                    mStatusRadioLocalTextView.setBackgroundColor(Color.TRANSPARENT);
+
+                                    mStatusProxyTextView.setText(proxy);
+                                    mStatusProxyTextView.setTypeface(null, Typeface.NORMAL);
+                                    mStatusProxyTextView.setTextColor(Color.BLACK);
+                                    mStatusProxyTextView.setBackgroundColor(Color.TRANSPARENT);
+
+                                }
+                            });
+                        }
+
+                        public void fail() {
+                            mRssiTextView.setText("0 dbi");
                             mRssiTextView.setTypeface(null, Typeface.NORMAL);
                             mRssiTextView.setTextColor(Color.BLACK);
                             mRssiTextView.setBackgroundColor(Color.TRANSPARENT);
-
-                            mStatusRadioLocalTextView.setText(localRadio);
-                            mStatusRadioLocalTextView.setTypeface(null, Typeface.NORMAL);
-                            mStatusRadioLocalTextView.setTextColor(Color.BLACK);
-                            mStatusRadioLocalTextView.setBackgroundColor(Color.TRANSPARENT);
-
-                            mStatusProxyTextView.setText(proxy);
-                            mStatusProxyTextView.setTypeface(null, Typeface.NORMAL);
-                            mStatusProxyTextView.setTextColor(Color.BLACK);
-                            mStatusProxyTextView.setBackgroundColor(Color.TRANSPARENT);
-
-                            Sinal sinal = new Sinal();
-
-                            try {
-                                com.maykot.maykottracker.models.Location location = new com.maykot.maykottracker.models.Location(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-                                sinal.setDate(new Date());
-                                sinal.setLocation(location);
-                                sinal.setRssi(Integer.parseInt(rssi));
-
-                                sinal.salva(DataBaseOpenHelper.getInstance(getApplicationContext()).getDatabase());
-
-                                Notifcation.notifyPoint(MainActivity.this, sinal, mSharedPreferences);
-
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-
                         }
                     });
-                }
+                } catch (Exception e) {}
+    }
 
-                public void fail() {
-                }
-            });
-        } catch (Exception e) {
-            //falha no mqtt
-            Toast.makeText(getApplicationContext(), "Mensagem Fail: ", Toast.LENGTH_LONG).show();
-        }
+    public void pingConnection() {
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Radio.getInstance(getApplicationContext()).pingRadio(new ConnectListener() {
+                        public void result(final String response, int status) {
+                            MainActivity.this.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+
+                                    String rssi = response;
+                                    try {
+                                        if(rssi == null)
+                                            rssi = "0";
+
+                                    }catch (Exception e){
+                                        rssi = "0";
+                                    }
+                                    mRssiTextView.setText(rssi);
+
+
+                                    Sinal sinal = new Sinal();
+
+                                    try {
+                                        if(mLastLocation != null) {
+                                            com.maykot.maykottracker.models.Location location = new com.maykot.maykottracker.models.Location(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                                            sinal.setDate(new Date());
+                                            sinal.setLocation(location);
+                                            sinal.setRssi(Integer.parseInt(rssi));
+
+                                            sinal.salva(DataBaseOpenHelper.getInstance(getApplicationContext()).getDatabase());
+
+                                            Notifcation.notifyPoint(MainActivity.this, sinal, mSharedPreferences);
+                                        }
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            });
+                        }
+
+                    });
+                } catch (Exception e) { }
+            }
+        }).start();
     }
 
     @Override
@@ -579,14 +596,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             if (result) {
                 mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.greenButton));
                 mMqttConnectButton.setText("RADIO\nOK!");
+                mChatButton.setEnabled(true);
+                mStopChatButton.setEnabled(true);
             } else {
                 mMqttConnectButton.setBackgroundColor(getResources().getColor(R.color.redButton));
                 mMqttConnectButton.setText("RADIO\nFail!");
+                mChatButton.setEnabled(false);
+                mStopChatButton.setEnabled(false);
 
             }
             progDailog.dismiss();
         }
-
     }
 
     private class EnviaSinaisTask extends AsyncTask<Void, Void, Integer> {

@@ -44,7 +44,7 @@ public class Notifcation {
                             .setSmallIcon(R.mipmap.ic_launcher)
                             .setWhen(Calendar.getInstance().getTimeInMillis())
                             .setDefaults(Notification.DEFAULT_ALL)
-                            .setContentText(
+                            .setContentText(sinal.getRssi()+" - "+
                                     "Lat: " + sinal.getLocation().getLat() +
                                             ", Lon: " + sinal.getLocation().getLon());
 
